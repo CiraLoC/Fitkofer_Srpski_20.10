@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
@@ -6,7 +7,17 @@ import { useAppState } from '@/state/AppStateContext';
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { profile, plan, resetPlan } = useAppState();
+  const { profile, plan, resetPlan, signOut, session, isHydrated } = useAppState();
+
+  useEffect(() => {
+    if (isHydrated && !session) {
+      router.replace('/auth');
+    }
+  }, [isHydrated, router, session]);
+
+  if (!session) {
+    return null;
+  }
 
   if (!profile || !plan) {
     return (
@@ -99,6 +110,10 @@ export default function ProfileScreen() {
 
       <TouchableOpacity style={styles.primaryButton} onPress={handleRegenerate}>
         <Text style={styles.primaryLabel}>Ponovi onboarding</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity style={styles.secondaryButton} onPress={signOut}>
+        <Text style={styles.secondaryLabel}>Odjavi se</Text>
       </TouchableOpacity>
     </ScrollView>
   );

@@ -1,4 +1,15 @@
-import { createContext, ReactNode, useContext, useMemo, useReducer } from 'react';
+import {
+  createContext,
+  ReactNode,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useReducer,
+  useRef,
+  useState,
+} from 'react';
+import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 
 import type {
   AppActions,
@@ -6,9 +17,21 @@ import type {
   AppStateContextValue,
   DailyLog,
   GeneratedPlan,
+  SyncStatus,
   StressLevel,
   UserProfile,
 } from '@/types';
+import { supabase } from '@/lib/supabase/client';
+import {
+  deletePlan,
+  deleteProfile,
+  fetchLogs,
+  fetchPlan,
+  fetchProfile,
+  upsertDailyLog,
+  upsertPlan,
+  upsertProfile,
+} from '@/lib/supabase/storage';
 
 const AppStateContext = createContext<AppStateContextValue | undefined>(undefined);
 
@@ -22,7 +45,8 @@ type Action =
   | { type: 'SET_PROFILE'; payload: UserProfile }
   | { type: 'SET_PLAN'; payload: GeneratedPlan }
   | { type: 'RESET' }
-  | { type: 'UPSERT_LOG'; payload: DailyLog };
+  | { type: 'UPSERT_LOG'; payload: DailyLog }
+  | { type: 'HYDRATE'; payload: AppState };
 
 function reducer(state: AppState, action: Action): AppState {
   switch (action.type) {
@@ -41,6 +65,8 @@ function reducer(state: AppState, action: Action): AppState {
         },
       };
     }
+    case 'HYDRATE':
+      return action.payload;
     default:
       return state;
   }
@@ -59,68 +85,216 @@ function ensureLog(logs: Record<string, DailyLog>, date: string): DailyLog {
 
 export function AppStateProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, initialState);
+  const [isHydrated, setIsHydrated] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<SyncStatus>('idle');
+  const [lastError, setLastError] = useState<string | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const userIdRef = useRef<string | null>(null);
+
+  const handleError = useCallback((error: unknown) => {
+    console.error('[AppState] Supabase sync error', error);
+    setSyncStatus('error');
+    setLastError(error instanceof Error ? error.message : String(error));
+  }, []);
+
+  const hydrate = useCallback(
+    async (session: Session | null) => {
+      setSession(session);
+      userIdRef.current = session?.user?.id ?? null;
+
+      if (!session?.user) {
+        dispatch({ type: 'RESET' });
+        setIsHydrated(true);
+        return;
+      }
+
+      setSyncStatus('syncing');
+      try {
+        const [profile, plan, logs] = await Promise.all([
+          fetchProfile(session.user.id),
+          fetchPlan(session.user.id),
+          fetchLogs(session.user.id),
+        ]);
+
+        dispatch({
+          type: 'HYDRATE',
+          payload: {
+            profile: profile ?? null,
+            plan: plan ?? null,
+            logs,
+          },
+        });
+        setLastError(null);
+      } catch (error) {
+        handleError(error);
+      } finally {
+        setIsHydrated(true);
+        setSyncStatus('idle');
+      }
+    },
+    [handleError],
+  );
+
+  useEffect(() => {
+    let isMounted = true;
+    const init = async () => {
+      try {
+        const { data, error } = await supabase.auth.getSession();
+        if (error) {
+          handleError(error);
+          setIsHydrated(true);
+          return;
+        }
+        if (!isMounted) return;
+        await hydrate(data.session ?? null);
+      } catch (error) {
+        handleError(error);
+        setIsHydrated(true);
+      }
+    };
+
+    void init();
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      (_event: AuthChangeEvent, session: Session | null) => {
+        void hydrate(session);
+      },
+    );
+
+    return () => {
+      isMounted = false;
+      authListener.subscription.unsubscribe();
+    };
+  }, [handleError, hydrate]);
+
+  const withSync = useCallback(
+    async (operation: () => Promise<void>) => {
+      const userId = userIdRef.current;
+      if (!userId) {
+        return;
+      }
+      setSyncStatus('syncing');
+      try {
+        await operation();
+        setSyncStatus('idle');
+        setLastError(null);
+      } catch (error) {
+        handleError(error);
+      }
+    },
+    [handleError],
+  );
 
   const actions: AppActions = useMemo(
     () => ({
-      setProfile(profile: UserProfile) {
+      async setProfile(profile: UserProfile) {
         dispatch({ type: 'SET_PROFILE', payload: profile });
+        await withSync(async () => {
+          const userId = userIdRef.current;
+          if (!userId) return;
+          await upsertProfile(userId, profile);
+        });
       },
-      setPlan(plan: GeneratedPlan) {
+      async setPlan(plan: GeneratedPlan) {
         dispatch({ type: 'SET_PLAN', payload: plan });
+        await withSync(async () => {
+          const userId = userIdRef.current;
+          if (!userId) return;
+          await upsertPlan(userId, plan);
+        });
       },
-      resetPlan() {
+      async resetPlan() {
         dispatch({ type: 'RESET' });
+        await withSync(async () => {
+          const userId = userIdRef.current;
+          if (!userId) return;
+          await deletePlan(userId);
+          await deleteProfile(userId);
+        });
       },
-      toggleWorkoutCompletion(date: string, workoutId: string) {
+      async toggleWorkoutCompletion(date: string, workoutId: string) {
         const log = ensureLog(state.logs, date);
         const exists = log.workoutsCompleted.includes(workoutId);
         const workoutsCompleted = exists
           ? log.workoutsCompleted.filter((id) => id !== workoutId)
           : [...log.workoutsCompleted, workoutId];
+        const nextLog = { ...log, workoutsCompleted };
         dispatch({
           type: 'UPSERT_LOG',
-          payload: { ...log, workoutsCompleted },
+          payload: nextLog,
+        });
+        await withSync(async () => {
+          const userId = userIdRef.current;
+          if (!userId) return;
+          await upsertDailyLog(userId, nextLog);
         });
       },
-      toggleMealCompletion(date: string, mealId: string) {
+      async toggleMealCompletion(date: string, mealId: string) {
         const log = ensureLog(state.logs, date);
         const exists = log.mealsCompleted.includes(mealId);
         const mealsCompleted = exists
           ? log.mealsCompleted.filter((id) => id !== mealId)
           : [...log.mealsCompleted, mealId];
+        const nextLog = { ...log, mealsCompleted };
         dispatch({
           type: 'UPSERT_LOG',
-          payload: { ...log, mealsCompleted },
+          payload: nextLog,
+        });
+        await withSync(async () => {
+          const userId = userIdRef.current;
+          if (!userId) return;
+          await upsertDailyLog(userId, nextLog);
         });
       },
-      toggleHabitCompletion(date: string, habitId: string) {
+      async toggleHabitCompletion(date: string, habitId: string) {
         const log = ensureLog(state.logs, date);
         const exists = log.habitsCompleted.includes(habitId);
         const habitsCompleted = exists
           ? log.habitsCompleted.filter((id) => id !== habitId)
           : [...log.habitsCompleted, habitId];
+        const nextLog = { ...log, habitsCompleted };
         dispatch({
           type: 'UPSERT_LOG',
-          payload: { ...log, habitsCompleted },
+          payload: nextLog,
+        });
+        await withSync(async () => {
+          const userId = userIdRef.current;
+          if (!userId) return;
+          await upsertDailyLog(userId, nextLog);
         });
       },
-      setDailyEnergy(date: string, level: StressLevel) {
+      async setDailyEnergy(date: string, level: StressLevel) {
         const log = ensureLog(state.logs, date);
+        const nextLog = { ...log, energy: level };
         dispatch({
           type: 'UPSERT_LOG',
-          payload: { ...log, energy: level },
+          payload: nextLog,
         });
+        await withSync(async () => {
+          const userId = userIdRef.current;
+          if (!userId) return;
+          await upsertDailyLog(userId, nextLog);
+        });
+      },
+      async signOut() {
+        await supabase.auth.signOut();
+        setSession(null);
+        dispatch({ type: 'RESET' });
+        userIdRef.current = null;
       },
     }),
-    [state.logs],
+    [state.logs, withSync],
   );
 
   const value = useMemo<AppStateContextValue>(
     () => ({
       ...state,
       ...actions,
+      isHydrated,
+      syncStatus,
+      lastError,
+      session,
     }),
-    [actions, state],
+    [actions, isHydrated, lastError, session, state, syncStatus],
   );
 
   return <AppStateContext.Provider value={value}>{children}</AppStateContext.Provider>;

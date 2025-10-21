@@ -1,6 +1,6 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, type Href } from 'expo-router';
 
 import Colors from '@/constants/Colors';
 import { useAppState } from '@/state/AppStateContext';
@@ -16,7 +16,14 @@ const intensityLabels: Record<DayIntensity, string> = {
 
 export default function PlanPreviewScreen() {
   const router = useRouter();
-  const { plan, profile } = useAppState();
+  const { plan, profile, session, isHydrated } = useAppState();
+  const dashboardHref = '/(tabs)/dashboard' satisfies Href;
+
+  useEffect(() => {
+    if (isHydrated && !session) {
+      router.replace('/auth');
+    }
+  }, [isHydrated, router, session]);
 
   const schedule = useMemo(() => {
     if (!plan) return [];
@@ -30,7 +37,7 @@ export default function PlanPreviewScreen() {
     });
   }, [plan]);
 
-  if (!plan || !profile) {
+  if (!session || !plan || !profile) {
     return (
       <View style={styles.centered}>
         <Text style={styles.emptyText}>Generiši plan kroz onboarding da bi ga videla.</Text>
@@ -39,7 +46,7 @@ export default function PlanPreviewScreen() {
   }
 
   const handleStart = () => {
-    router.replace('/(tabs)');
+    router.replace(dashboardHref);
   };
 
   return (

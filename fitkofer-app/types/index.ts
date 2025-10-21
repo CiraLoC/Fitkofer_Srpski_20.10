@@ -1,3 +1,5 @@
+import type { Session } from '@supabase/supabase-js';
+
 export type Goal = 'lose' | 'maintain' | 'gain';
 export type ActivityLevel = 'sedentary' | 'light' | 'moderate' | 'high';
 export type DietPreference = 'omnivore' | 'pescatarian' | 'vegetarian' | 'mixed';
@@ -121,14 +123,27 @@ export interface AppState {
   logs: Record<string, DailyLog>;
 }
 
+export type SyncStatus = 'idle' | 'syncing' | 'error';
+
 export interface AppActions {
-  setProfile: (profile: UserProfile) => void;
-  setPlan: (plan: GeneratedPlan) => void;
-  resetPlan: () => void;
-  toggleWorkoutCompletion: (date: string, workoutId: string) => void;
-  toggleMealCompletion: (date: string, mealId: string) => void;
-  toggleHabitCompletion: (date: string, habitId: string) => void;
-  setDailyEnergy: (date: string, level: StressLevel) => void;
+  setProfile: (profile: UserProfile) => Promise<void>;
+  setPlan: (plan: GeneratedPlan) => Promise<void>;
+  resetPlan: () => Promise<void>;
+  toggleWorkoutCompletion: (date: string, workoutId: string) => Promise<void>;
+  toggleMealCompletion: (date: string, mealId: string) => Promise<void>;
+  toggleHabitCompletion: (date: string, habitId: string) => Promise<void>;
+  setDailyEnergy: (date: string, level: StressLevel) => Promise<void>;
+  signOut: () => Promise<void>;
 }
 
-export type AppStateContextValue = AppState & AppActions;
+export interface AppStateMeta {
+  isHydrated: boolean;
+  syncStatus: SyncStatus;
+  lastError?: string | null;
+}
+
+export interface AppAuthState {
+  session: Session | null;
+}
+
+export type AppStateContextValue = AppState & AppActions & AppStateMeta & AppAuthState;

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -122,12 +122,22 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 export default function OnboardingScreen() {
   const router = useRouter();
-  const { setProfile, setPlan } = useAppState();
+  const { setProfile, setPlan, session, isHydrated } = useAppState();
   const [activeStep, setActiveStep] = useState<Step>(steps[0]);
   const [form, setForm] = useState<UserProfile>(initialProfile);
   const [allergyInput, setAllergyInput] = useState('');
   const [dislikeInput, setDislikeInput] = useState('');
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isHydrated && !session) {
+      router.replace('/auth');
+    }
+  }, [isHydrated, router, session]);
+
+  if (!session) {
+    return null;
+  }
 
   const stepIndex = useMemo(() => steps.indexOf(activeStep), [activeStep]);
 
@@ -195,12 +205,17 @@ export default function OnboardingScreen() {
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!validateStep()) return;
-    setProfile(form);
-    const plan = generatePlan(form);
-    setPlan(plan);
-    router.replace('/plan-preview');
+    try {
+      await setProfile(form);
+      const plan = generatePlan(form);
+      await setPlan(plan);
+      router.replace('/plan-preview');
+    } catch (submitError) {
+      console.error('[Onboarding] Failed to persist profile/plan', submitError);
+      setError('Došlo je do greške pri čuvanju plana. Pokušaj ponovo.');
+    }
   };
 
   const equipmentItems =
