@@ -12,6 +12,7 @@ import type {
   UserProfile,
   WorkoutExercise,
   WorkoutSession,
+  DailyNutritionPlan,
 } from '@/types';
 
 type SplitConfig = {
@@ -51,37 +52,93 @@ const goalAdjustments: Record<UserProfile['goal'], number> = {
   gain: 0.12,
 };
 
-function pickExercises(
-  focus: WorkoutSession['focus'],
-  location: UserProfile['equipment']['location'],
-  count: number,
-): WorkoutExercise[] {
-  const pool = location === 'home' ? homeExercises : gymExercises;
+const dayLabels = ['Ponedeljak', 'Utorak', 'Sreda', 'Četvrtak', 'Petak', 'Subota', 'Nedelja'];
+
+const mealDistribution: Record<
+  DayIntensity,
+  Array<{
+    mealType: MealRecipe['mealType'];
+    ratio: number;
+  }>
+> = {
+  low: [
+    { mealType: 'breakfast', ratio: 0.3 },
+    { mealType: 'lunch', ratio: 0.4 },
+    { mealType: 'dinner', ratio: 0.3 },
+  ],
+  mid: [
+    { mealType: 'breakfast', ratio: 0.28 },
+    { mealType: 'lunch', ratio: 0.34 },
+    { mealType: 'dinner', ratio: 0.28 },
+    { mealType: 'snack', ratio: 0.1 },
+  ],
+  high: [
+    { mealType: 'breakfast', ratio: 0.27 },
+    { mealType: 'lunch', ratio: 0.33 },
+    { mealType: 'dinner', ratio: 0.25 },
+    { mealType: 'snack', ratio: 0.08 },
+    { mealType: 'dessert', ratio: 0.07 },
+  ],
+};
+
+function exerciseMatchesProfile(exercise: WorkoutExercise, profile: UserProfile) {
+  if (exercise.preferredLocation && exercise.preferredLocation !== profile.equipment.location) {
+    return false;
+  }
+  if (exercise.goalTags && exercise.goalTags.length > 0 && !exercise.goalTags.includes(profile.goal)) {
+    return false;
+  }
+  if (exercise.healthTags && exercise.healthTags.length > 0) {
+    const relevant = profile.healthConditions.some((condition) => exercise.healthTags?.includes(condition));
+    if (!relevant) {
+      return false;
+    }
+  }
+  if (exercise.intensity === 'advanced' && profile.activityLevel !== 'high') {
+    return false;
+  }
+  if (exercise.intensity === 'intermediate' && profile.activityLevel === 'sedentary') {
+    return false;
+  }
+  return true;
+}
+
+function pickExercises(focus: WorkoutSession['focus'], profile: UserProfile, count: number): WorkoutExercise[] {
+  const basePool = profile.equipment.location === 'home' ? homeExercises : gymExercises;
+  const tailoredPool = basePool.filter((exercise) => exerciseMatchesProfile(exercise, profile));
   const normalizedFocus = focus;
 
-  const primary = pool.filter((item) => {
+  const focusMatches = (exercise: WorkoutExercise) => {
     if (normalizedFocus === 'full') {
-      return item.focus === 'full' || item.focus === 'lower' || item.focus === 'upper';
+      return exercise.focus === 'full' || exercise.focus === 'lower' || exercise.focus === 'upper';
     }
     if (normalizedFocus === 'upper') {
-      return item.focus === 'upper' || item.focus === 'push' || item.focus === 'pull';
+      return exercise.focus === 'upper' || exercise.focus === 'push' || exercise.focus === 'pull';
     }
     if (normalizedFocus === 'lower') {
-      return item.focus === 'lower';
+      return exercise.focus === 'lower';
     }
     if (normalizedFocus === 'push') {
-      return item.focus === 'push' || item.focus === 'upper';
+      return exercise.focus === 'push' || exercise.focus === 'upper';
     }
     if (normalizedFocus === 'pull') {
-      return item.focus === 'pull' || item.focus === 'upper';
+      return exercise.focus === 'pull' || exercise.focus === 'upper';
     }
     if (normalizedFocus === 'cardio' || normalizedFocus === 'mobility') {
-      return item.focus === normalizedFocus;
+      return exercise.focus === normalizedFocus;
     }
-    return item.focus === normalizedFocus;
-  });
+    return exercise.focus === normalizedFocus;
+  };
 
-  const complementary = pool.filter((item) => item.focus === 'core' || item.focus === 'mobility');
+  let primary = tailoredPool.filter(focusMatches);
+  if (primary.length === 0) {
+    primary = basePool.filter(focusMatches);
+  }
+
+  let complementary = tailoredPool.filter((item) => item.focus === 'core' || item.focus === 'mobility');
+  if (complementary.length === 0) {
+    complementary = basePool.filter((item) => item.focus === 'core' || item.focus === 'mobility');
+  }
 
   const selected: WorkoutExercise[] = [];
   const used = new Set<string>();
@@ -107,7 +164,7 @@ function pickExercises(
 function buildSessions(profile: UserProfile): WorkoutSession[] {
   const config = splits[profile.daysPerWeek];
   return config.focuses.map((focus, index) => {
-    const exercises = pickExercises(focus, profile.equipment.location, 6);
+    const exercises = pickExercises(focus, profile, 6);
     const difficulty = profile.activityLevel === 'sedentary' ? 'beginner' : 'intermediate';
     return {
       id: `${focus}-${index + 1}`,
@@ -136,94 +193,207 @@ function adjustForConditions(value: number, profile: UserProfile): number {
   return value;
 }
 
-function buildNutrition(profile: UserProfile, weeklyCalories: number, rotation: DayIntensity[]) {
-  const proteinPerKg = profile.goal === 'gain' ? 2 : 1.8;
-  const protein = proteinPerKg * profile.weightKg;
-  const fatsPerKg = profile.goal === 'lose' ? 0.9 : profile.goal === 'gain' ? 1.1 : 1;
-  let fats = fatsPerKg * profile.weightKg;
-
-  if (profile.healthConditions.includes('Hashimoto')) {
-    fats += 5;
-  }
-
-  const caloriesFromProtein = protein * 4;
-  const caloriesFromFat = fats * 9;
-  const remainingCalories = Math.max(weeklyCalories - (caloriesFromProtein + caloriesFromFat), 50);
-
-  let carbs = remainingCalories / 4;
-  carbs = adjustForConditions(carbs, profile);
-
-  const midCalories = weeklyCalories;
-  const lowCalories = Math.round(midCalories * 0.86);
-  const highCalories = Math.round(midCalories * 1.1);
-
-  const buildDailyPlan = (dayCalories: number, dayType: DayIntensity) => {
-    const carbAdjust =
-      dayType === 'low' ? carbs * 0.85 : dayType === 'high' ? carbs * 1.1 : carbs;
-    const fatAdjust =
-      dayType === 'low' ? fats * 1.05 : dayType === 'high' ? fats * 0.95 : fats;
-
-    return {
-      dayType,
-      calories: Math.round(dayCalories),
-      protein: Math.round(protein),
-      carbs: Math.round(carbAdjust),
-      fats: Math.round(fatAdjust),
-      meals: selectMeals(profile, dayType),
-      swaps: mealSwaps,
-    };
-  };
-
-  return {
-    rotation,
-    planByDayType: {
-      low: buildDailyPlan(lowCalories, 'low'),
-      mid: buildDailyPlan(midCalories, 'mid'),
-      high: buildDailyPlan(highCalories, 'high'),
-    },
-  };
-}
-
 function filterMealsByPreference(preference: DietPreference, candidates: MealRecipe[]): MealRecipe[] {
   switch (preference) {
     case 'vegetarian':
-      return candidates.filter((meal) => meal.tags.includes('vegetarian'));
+      return candidates.filter((meal) => meal.dietTypes.includes('vegetarian') || meal.dietTypes.includes('mixed'));
     case 'pescatarian':
-      return candidates.filter((meal) => meal.tags.includes('pescatarian') || meal.tags.includes('vegetarian'));
+      return candidates.filter((meal) => meal.dietTypes.includes('pescatarian') || meal.dietTypes.includes('mixed') || meal.dietTypes.includes('vegetarian'));
+    case 'keto':
+      return candidates.filter((meal) => meal.dietTypes.includes('keto') || meal.dietTypes.includes('carnivore'));
+    case 'carnivore':
+      return candidates.filter((meal) => meal.dietTypes.includes('carnivore'));
+    case 'mixed':
+      return candidates.filter(
+        (meal) =>
+          meal.dietTypes.includes('mixed') ||
+          meal.dietTypes.includes('omnivore') ||
+          meal.dietTypes.includes('pescatarian') ||
+          meal.dietTypes.includes('vegetarian'),
+      );
+    case 'omnivore':
     default:
-      return candidates;
+      return candidates.filter((meal) => meal.dietTypes.includes('omnivore') || meal.dietTypes.includes('mixed'));
   }
 }
 
 function matchesRestrictions(profile: UserProfile, meal: MealRecipe): boolean {
-  const lowerIngredients = meal.ingredients.join(' ').toLowerCase();
+  const lowerIngredients = meal.ingredients.map((ingredient) => ingredient.name.toLowerCase()).join(' ');
   const hasAllergy = profile.allergies.some((allergy) => lowerIngredients.includes(allergy.toLowerCase()));
   const hasDisliked = profile.dislikedFoods.some((food) => lowerIngredients.includes(food.toLowerCase()));
   return !hasAllergy && !hasDisliked;
 }
 
-function selectMeals(profile: UserProfile, dayType: DayIntensity): MealRecipe[] {
-  const base = meals.filter((m) => matchesRestrictions(profile, m));
-  const byPref = filterMealsByPreference(profile.dietPreference, base);
-  const breakfast = byPref.find((meal) => meal.tags.includes('doručak')) ?? meals[0];
-  const lunch = byPref.find((meal) => meal.tags.includes('ručak')) ?? meals[3];
-  const snack =
-    byPref.find((meal) => meal.tags.includes('užina') || meal.tags.includes('desert')) ??
-    meals.find((m) => m.tags.includes('užina')) ??
-    meals[1];
+function scoreMealForDay(meal: MealRecipe, targetCalories: number, dayType: DayIntensity): number {
+  const baseScore = Math.abs(meal.calories - targetCalories);
+  const tagBoost =
+    dayType === 'high'
+      ? meal.tags.includes('high-calorie') ? -40 : 0
+      : dayType === 'low'
+        ? meal.tags.includes('low-calorie') ? -30 : 0
+        : meal.tags.includes('mid-calorie') ? -20 : 0;
+  const proteinBoost = meal.tags.includes('high-protein') ? -10 : 0;
+  return baseScore + tagBoost + proteinBoost;
+}
 
-  if (dayType === 'high') {
-    const additional = byPref.find((meal) => meal.tags.includes('desert')) ?? meals[meals.length - 1];
-    return [breakfast, lunch, snack, additional];
+function pickMealForType(
+  mealsPool: MealRecipe[],
+  mealType: MealRecipe['mealType'],
+  dayType: DayIntensity,
+  targetCalories: number,
+  usedIds: Set<string>,
+): MealRecipe | null {
+  const candidates = mealsPool.filter((meal) => meal.mealType === mealType);
+  if (candidates.length === 0) {
+    return null;
   }
 
-  if (dayType === 'low') {
-    return [breakfast, lunch, snack];
+  const unused = candidates.filter((candidate) => !usedIds.has(candidate.id));
+  const pool = unused.length > 0 ? unused : candidates;
+  const scored = pool
+    .map((meal) => ({
+      meal,
+      score: scoreMealForDay(meal, targetCalories, dayType),
+    }))
+    .sort((a, b) => a.score - b.score);
+
+  const chosen = scored[0]?.meal ?? null;
+  if (chosen) {
+    usedIds.add(chosen.id);
+  }
+  return chosen;
+}
+
+function sumMeals(mealsForDay: MealRecipe[]) {
+  return mealsForDay.reduce(
+    (acc, meal) => {
+      acc.calories += meal.calories;
+      acc.protein += meal.protein;
+      acc.carbs += meal.carbs;
+      acc.fats += meal.fats;
+      return acc;
+    },
+    { calories: 0, protein: 0, carbs: 0, fats: 0 },
+  );
+}
+
+function buildNutrition(profile: UserProfile, weeklyCalories: number, rotation: DayIntensity[]) {
+  const proteinPerKg = profile.goal === 'gain' ? 2 : 1.8;
+  const baseProtein = proteinPerKg * profile.weightKg;
+  const fatsPerKg = profile.goal === 'lose' ? 0.9 : profile.goal === 'gain' ? 1.1 : 1;
+  let baseFats = fatsPerKg * profile.weightKg;
+
+  if (profile.healthConditions.includes('Hashimoto')) {
+    baseFats += 5;
   }
 
-  const dinner =
-    byPref.find((meal) => meal.tags.includes('meal-prep') || meal.tags.includes('ručak')) ?? meals[2];
-  return [breakfast, lunch, dinner, snack];
+  const caloriesFromProtein = baseProtein * 4;
+  const caloriesFromFat = baseFats * 9;
+  const remainingCalories = Math.max(weeklyCalories - (caloriesFromProtein + caloriesFromFat), 120);
+
+  let baseCarbs = remainingCalories / 4;
+  baseCarbs = adjustForConditions(baseCarbs, profile);
+
+  const targets: Record<DayIntensity, { calories: number; protein: number; carbs: number; fats: number }> = {
+    low: {
+      calories: Math.round(weeklyCalories * 0.86),
+      protein: Math.round(baseProtein),
+      carbs: Math.round(baseCarbs * 0.82),
+      fats: Math.round(baseFats * 1.05),
+    },
+    mid: {
+      calories: Math.round(weeklyCalories),
+      protein: Math.round(baseProtein),
+      carbs: Math.round(baseCarbs),
+      fats: Math.round(baseFats),
+    },
+    high: {
+      calories: Math.round(weeklyCalories * 1.1),
+      protein: Math.round(baseProtein * 1.05),
+      carbs: Math.round(baseCarbs * 1.1),
+      fats: Math.round(baseFats * 0.95),
+    },
+  };
+
+  const basePool = meals.filter((meal) => matchesRestrictions(profile, meal));
+  const dietFiltered = filterMealsByPreference(profile.dietPreference, basePool);
+  const usedMealIds = new Set<string>();
+
+  const weeklyPlan: DailyNutritionPlan[] = rotation.map((dayType, index) => {
+    const specs = mealDistribution[dayType];
+    const mealsForDay: MealRecipe[] = [];
+    specs.forEach((spec) => {
+      const targetCalories = targets[dayType].calories * spec.ratio;
+      const chosen =
+        pickMealForType(dietFiltered, spec.mealType, dayType, targetCalories, usedMealIds) ??
+        pickMealForType(basePool, spec.mealType, dayType, targetCalories, usedMealIds);
+
+      if (chosen) {
+        mealsForDay.push(chosen);
+      }
+    });
+
+    if (mealsForDay.length === 0) {
+      const fallback = dietFiltered.slice(0, 3);
+      mealsForDay.push(...fallback);
+    }
+
+    const totals = sumMeals(mealsForDay);
+
+    return {
+      dayType,
+      dayIndex: index,
+      dayName: dayLabels[index],
+      calories: Math.round(totals.calories),
+      protein: Math.round(totals.protein),
+      carbs: Math.round(totals.carbs),
+      fats: Math.round(totals.fats),
+      meals: mealsForDay,
+      swaps: mealSwaps,
+    };
+  });
+
+  const planByDayType: Record<DayIntensity, DailyNutritionPlan> = {
+    low: weeklyPlan.find((plan) => plan.dayType === 'low') ?? {
+      dayType: 'low',
+      dayIndex: 0,
+      dayName: dayLabels[0],
+      calories: targets.low.calories,
+      protein: targets.low.protein,
+      carbs: targets.low.carbs,
+      fats: targets.low.fats,
+      meals: dietFiltered.filter((meal) => meal.mealType !== 'dessert').slice(0, 3),
+      swaps: mealSwaps,
+    },
+    mid: weeklyPlan.find((plan) => plan.dayType === 'mid') ?? {
+      dayType: 'mid',
+      dayIndex: 0,
+      dayName: dayLabels[0],
+      calories: targets.mid.calories,
+      protein: targets.mid.protein,
+      carbs: targets.mid.carbs,
+      fats: targets.mid.fats,
+      meals: dietFiltered.slice(0, 4),
+      swaps: mealSwaps,
+    },
+    high: weeklyPlan.find((plan) => plan.dayType === 'high') ?? {
+      dayType: 'high',
+      dayIndex: 0,
+      dayName: dayLabels[0],
+      calories: targets.high.calories,
+      protein: targets.high.protein,
+      carbs: targets.high.carbs,
+      fats: targets.high.fats,
+      meals: dietFiltered.slice(0, 5),
+      swaps: mealSwaps,
+    },
+  };
+
+  return {
+    rotation,
+    planByDayType,
+    weeklyPlan,
+  };
 }
 
 function buildTrainingPlan(profile: UserProfile): TrainingPlan {
@@ -232,7 +402,8 @@ function buildTrainingPlan(profile: UserProfile): TrainingPlan {
     day: index,
   }));
 
-  const startingDays = profile.daysPerWeek === 5 ? [0, 1, 2, 3, 4] : profile.daysPerWeek === 4 ? [0, 1, 3, 4] : profile.daysPerWeek === 3 ? [0, 2, 4] : [1, 4];
+  const startingDays =
+    profile.daysPerWeek === 5 ? [0, 1, 2, 3, 4] : profile.daysPerWeek === 4 ? [0, 1, 3, 4] : profile.daysPerWeek === 3 ? [0, 2, 4] : [1, 4];
 
   sessions.forEach((session, idx) => {
     const dayIndex = startingDays[idx] ?? idx;

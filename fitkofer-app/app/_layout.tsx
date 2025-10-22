@@ -84,8 +84,26 @@ function RootLayoutNav() {
               headerTitleStyle: { fontFamily: 'Inter_600SemiBold', fontSize: 18 },
             }}
           />
+          <Stack.Screen
+            name="plan-options"
+            options={{
+              title: 'Izaberi plan',
+              headerTitleStyle: { fontFamily: 'Inter_600SemiBold', fontSize: 18 },
+            }}
+          />
+          <Stack.Screen
+            name="plan-selection"
+            options={{
+              headerShown: false,
+            }}
+          />
         </Stack>
       </ThemeProvider>
     </AppStateProvider>
   );
 }
+
+
+
+
+

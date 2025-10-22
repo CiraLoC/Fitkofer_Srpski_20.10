@@ -2,7 +2,7 @@ import type { Session } from '@supabase/supabase-js';
 
 export type Goal = 'lose' | 'maintain' | 'gain';
 export type ActivityLevel = 'sedentary' | 'light' | 'moderate' | 'high';
-export type DietPreference = 'omnivore' | 'pescatarian' | 'vegetarian' | 'mixed';
+export type DietPreference = 'omnivore' | 'pescatarian' | 'vegetarian' | 'mixed' | 'keto' | 'carnivore';
 export type StressLevel = 1 | 2 | 3 | 4 | 5;
 export type DayIntensity = 'low' | 'mid' | 'high';
 
@@ -37,6 +37,10 @@ export interface WorkoutExercise {
   repRange: string;
   tempo?: string;
   restSeconds?: number;
+  goalTags?: Goal[];
+  healthTags?: HealthCondition[];
+  intensity?: 'beginner' | 'intermediate' | 'advanced';
+  preferredLocation?: 'home' | 'gym';
 }
 
 export interface WorkoutSession {
@@ -61,13 +65,25 @@ export interface TrainingPlan {
 export interface MealRecipe {
   id: string;
   title: string;
+  mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack' | 'dessert';
+  dietTypes: DietPreference[];
   calories: number;
   protein: number;
   carbs: number;
   fats: number;
   tags: string[];
-  ingredients: string[];
-  instructions: string;
+  ingredients: Array<{
+    name: string;
+    quantity: number;
+    unit: string;
+    calories: number;
+    protein: number;
+    carbs: number;
+    fats: number;
+    source: string;
+  }>;
+  instructions: string[];
+  image: string;
 }
 
 export interface MealSuggestion {
@@ -84,6 +100,8 @@ export interface DailyNutritionPlan {
   fats: number;
   meals: MealRecipe[];
   swaps: MealSuggestion[];
+  dayIndex?: number;
+  dayName?: string;
 }
 
 export interface Habit {
@@ -105,6 +123,7 @@ export interface GeneratedPlan {
   nutrition: {
     rotation: DayIntensity[];
     planByDayType: Record<DayIntensity, DailyNutritionPlan>;
+    weeklyPlan: DailyNutritionPlan[];
   };
   habits: HabitPlan;
 }

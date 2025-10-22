@@ -9,7 +9,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, type Href } from 'expo-router';
 
 import Colors from '@/constants/Colors';
 import { generatePlan } from '@/lib/plan/generator';
@@ -22,16 +22,15 @@ import type {
   UserProfile,
 } from '@/types';
 
-const steps = ['O tebi', 'Ciljevi', 'Ishrana', 'Oprema', 'Raspored'] as const;
+const steps = ['O tebi', 'Ciljevi', 'Ishrana', 'Logistika'] as const;
 
 type Step = (typeof steps)[number];
 
 const goals: { value: Goal; label: string }[] = [
   { value: 'lose', label: 'Gubitak masnog tkiva' },
-  { value: 'maintain', label: 'Održavanje' },
-  { value: 'gain', label: 'Dobitak mišića' },
+  { value: 'maintain', label: 'Odrzavanje' },
+  { value: 'gain', label: 'Dobitak misica' },
 ];
-
 const activities: { value: ActivityLevel; label: string }[] = [
   { value: 'sedentary', label: 'Sedeći posao' },
   { value: 'light', label: 'Lagano aktivna' },
@@ -55,9 +54,11 @@ const stressOptions: { value: StressLevel; label: string }[] = [
 
 const dietOptions: { value: UserProfile['dietPreference']; label: string }[] = [
   { value: 'omnivore', label: 'Sve jedem' },
-  { value: 'mixed', label: 'Meso + povrće fokus' },
+  { value: 'mixed', label: 'Meso + povrce fokus' },
   { value: 'pescatarian', label: 'Riba i biljni izvori' },
   { value: 'vegetarian', label: 'Vegetarijanski' },
+  { value: 'keto', label: 'Keto (low carb)' },
+  { value: 'carnivore', label: 'Carnivore' },
 ];
 
 const initialProfile: UserProfile = {
@@ -129,6 +130,8 @@ export default function OnboardingScreen() {
   const [dislikeInput, setDislikeInput] = useState('');
   const [error, setError] = useState<string | null>(null);
 
+  const stepIndex = useMemo(() => steps.indexOf(activeStep), [activeStep]);
+
   useEffect(() => {
     if (isHydrated && !session) {
       router.replace('/auth');
@@ -138,8 +141,6 @@ export default function OnboardingScreen() {
   if (!session) {
     return null;
   }
-
-  const stepIndex = useMemo(() => steps.indexOf(activeStep), [activeStep]);
 
   const nextStep = () => {
     if (stepIndex < steps.length - 1) {
@@ -183,13 +184,11 @@ export default function OnboardingScreen() {
         return false;
       }
     }
-    if (activeStep === 'Oprema') {
+    if (activeStep === 'Logistika') {
       if (form.equipment.location === 'home' && form.equipment.items.length === 0) {
-        setError('Dodaj barem jednu stavku opreme ili označi da radiš bez opreme.');
+        setError('Dodaj barem jednu stavku opreme ili oznaci da radi� bez opreme.');
         return false;
       }
-    }
-    if (activeStep === 'Raspored') {
       if (!form.daysPerWeek) {
         setError('Izaberi broj trening dana.');
         return false;
@@ -211,7 +210,7 @@ export default function OnboardingScreen() {
       await setProfile(form);
       const plan = generatePlan(form);
       await setPlan(plan);
-      router.replace('/plan-preview');
+      router.replace('/plan-options' as Href);
     } catch (submitError) {
       console.error('[Onboarding] Failed to persist profile/plan', submitError);
       setError('Došlo je do greške pri čuvanju plana. Pokušaj ponovo.');
@@ -437,14 +436,14 @@ export default function OnboardingScreen() {
               </View>
             </Section>
           </>
-        )}
+         )}
 
-        {activeStep === 'Oprema' && (
+        {activeStep === 'Logistika' && (
           <>
-            <Section title="Gde treniraš?">
+            <Section title="Gde treniras?">
               <View style={styles.pillRow}>
                 <OptionPill
-                  label="Kući"
+                  label="Kuci"
                   selected={form.equipment.location === 'home'}
                   onPress={() =>
                     setForm((prev) => ({
@@ -494,12 +493,8 @@ export default function OnboardingScreen() {
                 })}
               </View>
             </Section>
-          </>
-        )}
 
-        {activeStep === 'Raspored' && (
-          <>
-            <Section title="Koliko dana možeš da treniraš?">
+            <Section title="Koliko dana mozes da treniras?">
               <View style={styles.pillRow}>
                 {[2, 3, 4, 5].map((day) => (
                   <OptionPill
@@ -519,8 +514,8 @@ export default function OnboardingScreen() {
 
             <Section title="Spremna si!">
               <Text style={styles.summaryText}>
-                Posle potvrde generisaćemo treninge, rotaciju kalorija i navike usklađene sa tvojim
-                ulaznim podacima. Plan možeš prilagoditi kasnije.
+                Posle zavrsetka generisemo treninge, rotaciju kalorija i navike uskladjene sa tvojim
+                ulaznim podacima. Plan mozes dodatno prilagoditi kasnije.
               </Text>
             </Section>
           </>
@@ -540,7 +535,7 @@ export default function OnboardingScreen() {
             </TouchableOpacity>
           ) : (
             <TouchableOpacity style={styles.primaryButton} onPress={handleSubmit}>
-              <Text style={styles.primaryButtonLabel}>Generiši plan</Text>
+              <Text style={styles.primaryButtonLabel}>Zavrsi onboarding</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -743,3 +738,22 @@ const styles = StyleSheet.create({
     color: Colors.light.text,
   },
 });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

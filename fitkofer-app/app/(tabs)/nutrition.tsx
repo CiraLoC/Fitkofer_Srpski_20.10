@@ -5,7 +5,7 @@ import Colors from '@/constants/Colors';
 import { useAppState } from '@/state/AppStateContext';
 import type { DayIntensity } from '@/types';
 
-const dayLabels = ['PON', 'UTO', 'SRE', 'ČET', 'PET', 'SUB', 'NED'];
+const dayLabels = ['PON', 'UTO', 'SRE', 'CET', 'PET', 'SUB', 'NED'];
 
 const intensityLabels: Record<DayIntensity, string> = {
   low: 'Low dan',
@@ -22,13 +22,22 @@ export default function NutritionScreen() {
   if (!plan) {
     return (
       <View style={styles.centered}>
-        <Text style={styles.emptyText}>Nema planirane ishrane. Generiši plan kroz onboarding.</Text>
+        <Text style={styles.emptyText}>Nema planirane ishrane. Generisi plan kroz onboarding.</Text>
       </View>
     );
   }
 
-  const dayType = plan.nutrition.rotation[selectedDay];
-  const nutrition = plan.nutrition.planByDayType[dayType];
+  const fallbackDayType = plan.nutrition.rotation[selectedDay];
+  const fallbackPlan = plan.nutrition.planByDayType[fallbackDayType];
+  const dayPlan =
+    plan.nutrition.weeklyPlan?.[selectedDay] ??
+    ({
+      ...fallbackPlan,
+      dayIndex: selectedDay,
+      dayName: dayLabels[selectedDay],
+    } as typeof fallbackPlan & { dayIndex: number; dayName: string });
+  const dayType = dayPlan.dayType ?? fallbackDayType;
+
   const isoDate = useMemo(() => {
     const current = new Date();
     const diff = selectedDay - ((current.getDay() + 6) % 7);
@@ -39,18 +48,26 @@ export default function NutritionScreen() {
   const log = logs[isoDate];
 
   const shoppingList = useMemo(() => {
-    const entries = nutrition.meals
+    const accumulator = dayPlan.meals
       .map((meal) => meal.ingredients)
       .flat()
-      .reduce<Record<string, number>>((acc, ingredient) => {
-        const key = ingredient.toLowerCase();
-        acc[key] = (acc[key] ?? 0) + 1;
+      .reduce<Record<string, { quantity: number; unit: string }>>((acc, ingredient) => {
+        const key = ingredient.name.toLowerCase();
+        const existing = acc[key];
+        acc[key] = {
+          quantity: (existing?.quantity ?? 0) + ingredient.quantity,
+          unit: ingredient.unit,
+        };
         return acc;
       }, {});
-    return Object.entries(entries)
-      .map(([ingredient, count]) => (count > 1 ? `${ingredient} x${count}` : ingredient))
+
+    return Object.entries(accumulator)
+      .map(([name, details]) => {
+        const quantity = Math.round(details.quantity * 10) / 10;
+        return `${name} (${quantity}${details.unit})`;
+      })
       .sort();
-  }, [nutrition.meals]);
+  }, [dayPlan.meals]);
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -78,25 +95,25 @@ export default function NutritionScreen() {
         <Text style={styles.cardTitle}>Makroi</Text>
         <View style={styles.macrosRow}>
           <View style={styles.macroItem}>
-            <Text style={styles.macroValue}>{nutrition.calories}</Text>
+            <Text style={styles.macroValue}>{dayPlan.calories}</Text>
             <Text style={styles.macroLabel}>kcal</Text>
           </View>
           <View style={styles.macroItem}>
-            <Text style={styles.macroValue}>{nutrition.protein}g</Text>
+            <Text style={styles.macroValue}>{dayPlan.protein}g</Text>
             <Text style={styles.macroLabel}>Protein</Text>
           </View>
           <View style={styles.macroItem}>
-            <Text style={styles.macroValue}>{nutrition.carbs}g</Text>
+            <Text style={styles.macroValue}>{dayPlan.carbs}g</Text>
             <Text style={styles.macroLabel}>Ugljeni hidrati</Text>
           </View>
           <View style={styles.macroItem}>
-            <Text style={styles.macroValue}>{nutrition.fats}g</Text>
+            <Text style={styles.macroValue}>{dayPlan.fats}g</Text>
             <Text style={styles.macroLabel}>Masti</Text>
           </View>
         </View>
       </View>
 
-      {nutrition.meals.map((meal) => {
+      {dayPlan.meals.map((meal) => {
         const completed = log?.mealsCompleted.includes(meal.id);
         return (
           <View key={meal.id} style={styles.card}>
@@ -104,31 +121,36 @@ export default function NutritionScreen() {
               <View>
                 <Text style={styles.cardTitle}>{meal.title}</Text>
                 <Text style={styles.mealMeta}>
-                  {meal.calories} kcal · P {meal.protein}g · U {meal.carbs}g · M {meal.fats}g
+                  {meal.calories} kcal • P {meal.protein}g • U {meal.carbs}g • M {meal.fats}g
                 </Text>
               </View>
               <TouchableOpacity onPress={() => toggleMealCompletion(isoDate, meal.id)}>
-                <Text style={styles.actionLink}>{completed ? 'Poništi' : 'Označi kao pojedeno'}</Text>
+                <Text style={styles.actionLink}>{completed ? 'Ponisti' : 'Oznaci kao pojedeno'}</Text>
               </TouchableOpacity>
             </View>
-            <Text style={styles.tagRow}>{meal.tags.join(' • ')}</Text>
+            <Text style={styles.tagRow}>{meal.tags.join(' | ')}</Text>
             <Text style={styles.sectionTitle}>Sastojci</Text>
             {meal.ingredients.map((ingredient) => (
-              <Text key={ingredient} style={styles.ingredient}>
-                • {ingredient}
+              <Text key={`${meal.id}-${ingredient.name}`} style={styles.ingredient}>
+                - {Math.round(ingredient.quantity * 10) / 10}
+                {ingredient.unit} {ingredient.name} ({Math.round(ingredient.calories)} kcal)
               </Text>
             ))}
             <Text style={styles.sectionTitle}>Priprema</Text>
-            <Text style={styles.instructions}>{meal.instructions}</Text>
+            {meal.instructions.map((step, index) => (
+              <Text key={`${meal.id}-step-${index}`} style={styles.instructions}>
+                {index + 1}. {step}
+              </Text>
+            ))}
           </View>
         );
       })}
 
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Zamene obroka</Text>
-        <Text style={styles.copy}>Biraj zamenu ako želiš varijaciju, kalorijska kategorija ostaje ista.</Text>
+        <Text style={styles.copy}>Izaberi zamenu ako ti treba varijacija, kalorije ostaju u istoj zoni.</Text>
         <View style={styles.swapList}>
-          {plan.nutrition.planByDayType.mid.swaps.map((swap) => (
+          {dayPlan.swaps.map((swap) => (
             <View key={swap.id} style={styles.swapItem}>
               <Text style={styles.swapIcon}>{swap.icon}</Text>
               <Text style={styles.swapLabel}>{swap.title}</Text>
@@ -140,8 +162,8 @@ export default function NutritionScreen() {
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Lista za kupovinu</Text>
         {shoppingList.map((item) => (
-          <Text key={item} style={styles.ingredient}>
-            • {item}
+          <Text key={item} style={styles.copy}>
+            - {item}
           </Text>
         ))}
       </View>
@@ -156,15 +178,15 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 24,
-    gap: 18,
     paddingBottom: 100,
+    gap: 16,
   },
   centered: {
     flex: 1,
-    justifyContent: 'center',
     alignItems: 'center',
-    padding: 24,
+    justifyContent: 'center',
     backgroundColor: Colors.light.background,
+    padding: 24,
   },
   emptyText: {
     fontFamily: 'Inter_500Medium',
@@ -284,7 +306,8 @@ const styles = StyleSheet.create({
     borderColor: Colors.light.border,
   },
   swapIcon: {
-    fontSize: 20,
+    fontSize: 16,
+    fontFamily: 'Inter_600SemiBold',
   },
   swapLabel: {
     fontFamily: 'Inter_500Medium',

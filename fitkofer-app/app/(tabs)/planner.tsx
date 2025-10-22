@@ -33,7 +33,8 @@ export default function PlannerScreen() {
     const scheduleEntry = plan.training.schedule[idx];
     const session = plan.training.sessions.find((item) => item.id === scheduleEntry?.sessionId);
     const dayType = plan.nutrition.rotation[idx];
-    const meals = plan.nutrition.planByDayType[dayType].meals;
+    const dayPlan = plan.nutrition.weeklyPlan?.[idx] ?? plan.nutrition.planByDayType[dayType];
+    const meals = dayPlan.meals;
     const habits = plan.habits.dailyHabits;
     const log = logs[iso];
     const total =

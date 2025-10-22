@@ -41,8 +41,9 @@ export default function DashboardScreen() {
   }
 
   const dayIndex = ((today.getDay() + 6) % 7) as 0 | 1 | 2 | 3 | 4 | 5 | 6;
-  const rotation = plan.nutrition.rotation[dayIndex];
-  const dailyNutrition = plan.nutrition.planByDayType[rotation];
+  const dayPlan = plan.nutrition.weeklyPlan?.[dayIndex];
+  const rotation = dayPlan?.dayType ?? plan.nutrition.rotation[dayIndex];
+  const dailyNutrition = dayPlan ?? plan.nutrition.planByDayType[rotation];
   const scheduled = plan.training.schedule.find((entry) => entry.day === dayIndex);
   const workout = plan.training.sessions.find((session) => session.id === scheduled?.sessionId);
   const habits = plan.habits.dailyHabits;
