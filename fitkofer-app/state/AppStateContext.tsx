@@ -32,6 +32,7 @@ import {
   upsertPlan,
   upsertProfile,
 } from '@/lib/supabase/storage';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const AppStateContext = createContext<AppStateContextValue | undefined>(undefined);
 
@@ -40,6 +41,8 @@ const initialState: AppState = {
   plan: null,
   logs: {},
 };
+
+const ONBOARDING_FLAG_BASE = 'fitkofer:onboardingCompleted';
 
 type Action =
   | { type: 'SET_PROFILE'; payload: UserProfile }
@@ -90,6 +93,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const [lastError, setLastError] = useState<string | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const userIdRef = useRef<string | null>(null);
+  const onboardingKeyRef = useRef<string | null>(null);
+  const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(false);
 
   const handleError = useCallback((error: unknown) => {
     console.error('[AppState] Supabase sync error', error);
@@ -101,12 +106,26 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     async (session: Session | null) => {
       setSession(session);
       userIdRef.current = session?.user?.id ?? null;
+      onboardingKeyRef.current = session?.user?.id
+        ? `${ONBOARDING_FLAG_BASE}:${session.user.id}`
+        : null;
 
       if (!session?.user) {
         dispatch({ type: 'RESET' });
+        setHasCompletedOnboarding(false);
         setIsHydrated(true);
         return;
       }
+
+      let storedFlag = false;
+      if (onboardingKeyRef.current) {
+        try {
+          storedFlag = (await AsyncStorage.getItem(onboardingKeyRef.current)) === 'true';
+        } catch (flagError) {
+          console.warn('[AppState] Failed to read onboarding flag', flagError);
+        }
+      }
+      setHasCompletedOnboarding(storedFlag);
 
       setSyncStatus('syncing');
       try {
@@ -125,6 +144,16 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           },
         });
         setLastError(null);
+
+        const completed = Boolean(plan) || storedFlag;
+        setHasCompletedOnboarding(completed);
+        if (completed && onboardingKeyRef.current) {
+          try {
+            await AsyncStorage.setItem(onboardingKeyRef.current, 'true');
+          } catch (persistError) {
+            console.warn('[AppState] Failed to persist onboarding flag', persistError);
+          }
+        }
       } catch (error) {
         handleError(error);
       } finally {
@@ -210,6 +239,14 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           await deletePlan(userId);
           await deleteProfile(userId);
         });
+        setHasCompletedOnboarding(false);
+        if (onboardingKeyRef.current) {
+          try {
+            await AsyncStorage.removeItem(onboardingKeyRef.current);
+          } catch (flagError) {
+            console.warn('[AppState] Failed to remove onboarding flag', flagError);
+          }
+        }
       },
       async toggleWorkoutCompletion(date: string, workoutId: string) {
         const log = ensureLog(state.logs, date);
@@ -275,6 +312,16 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           await upsertDailyLog(userId, nextLog);
         });
       },
+      async markOnboardingComplete() {
+        setHasCompletedOnboarding(true);
+        if (onboardingKeyRef.current) {
+          try {
+            await AsyncStorage.setItem(onboardingKeyRef.current, 'true');
+          } catch (flagError) {
+            console.warn('[AppState] Failed to persist onboarding flag', flagError);
+          }
+        }
+      },
       async signOut() {
         await supabase.auth.signOut();
         setSession(null);
@@ -292,9 +339,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       isHydrated,
       syncStatus,
       lastError,
+      hasCompletedOnboarding,
       session,
     }),
-    [actions, isHydrated, lastError, session, state, syncStatus],
+    [actions, hasCompletedOnboarding, isHydrated, lastError, session, state, syncStatus],
   );
 
   return <AppStateContext.Provider value={value}>{children}</AppStateContext.Provider>;

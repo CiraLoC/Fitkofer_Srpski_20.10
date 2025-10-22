@@ -3,7 +3,7 @@ import { Redirect, type Href } from 'expo-router';
 import { useAppState } from '@/state/AppStateContext';
 
 export default function IndexRoute() {
-  const { profile, plan, session, isHydrated } = useAppState();
+  const { plan, session, isHydrated, hasCompletedOnboarding } = useAppState();
   const dashboardHref = '/(tabs)/dashboard' satisfies Href;
 
   if (!isHydrated) {
@@ -14,12 +14,12 @@ export default function IndexRoute() {
     return <Redirect href="/auth" />;
   }
 
-  if (!profile) {
+  if (!hasCompletedOnboarding) {
     return <Redirect href="/onboarding" />;
   }
 
   if (!plan) {
-    return <Redirect href="/plan-preview" />;
+    return <Redirect href="/plan-options" />;
   }
 
   return <Redirect href={dashboardHref} />;

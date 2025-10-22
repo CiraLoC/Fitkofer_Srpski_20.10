@@ -153,12 +153,14 @@ export interface AppActions {
   toggleHabitCompletion: (date: string, habitId: string) => Promise<void>;
   setDailyEnergy: (date: string, level: StressLevel) => Promise<void>;
   signOut: () => Promise<void>;
+  markOnboardingComplete: () => Promise<void>;
 }
 
 export interface AppStateMeta {
   isHydrated: boolean;
   syncStatus: SyncStatus;
   lastError?: string | null;
+  hasCompletedOnboarding: boolean;
 }
 
 export interface AppAuthState {

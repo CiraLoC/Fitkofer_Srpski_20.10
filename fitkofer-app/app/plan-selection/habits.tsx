@@ -1,4 +1,4 @@
-import { router } from 'expo-router';
+import { router, type Href } from 'expo-router';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import Colors from '@/constants/Colors';
@@ -13,12 +13,12 @@ export default function HabitsPlanScreen() {
 
       <TouchableOpacity
         style={styles.primaryButton}
-        onPress={() => router.replace('/(tabs)/planner')}
+        onPress={() => router.replace('/(tabs)/planner' as Href)}
       >
         <Text style={styles.primaryLabel}>Otvori panel za navike</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.secondaryButton} onPress={() => router.replace('/plan-preview')}>
+      <TouchableOpacity style={styles.secondaryButton} onPress={() => router.replace('/plan-preview' as Href)}>
         <Text style={styles.secondaryLabel}>Ipak želim ceo paket</Text>
       </TouchableOpacity>
     </View>
@@ -66,3 +66,6 @@ const styles = StyleSheet.create({
     color: Colors.light.text,
   },
 });
+
+
+

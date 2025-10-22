@@ -123,7 +123,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 export default function OnboardingScreen() {
   const router = useRouter();
-  const { setProfile, setPlan, session, isHydrated } = useAppState();
+  const { setProfile, setPlan, session, isHydrated, markOnboardingComplete } = useAppState();
   const [activeStep, setActiveStep] = useState<Step>(steps[0]);
   const [form, setForm] = useState<UserProfile>(initialProfile);
   const [allergyInput, setAllergyInput] = useState('');
@@ -738,6 +738,8 @@ const styles = StyleSheet.create({
     color: Colors.light.text,
   },
 });
+
+
 
 
 

@@ -1,4 +1,4 @@
-import { router } from 'expo-router';
+import { router, type Href } from 'expo-router';
 import { StyleSheet, Text, TouchableOpacity, View, ScrollView } from 'react-native';
 
 import Colors from '@/constants/Colors';
@@ -51,7 +51,7 @@ export default function PlanOptionsScreen() {
           <TouchableOpacity
             key={option.id}
             style={styles.optionButton}
-            onPress={() => router.replace(option.route as Parameters<typeof router.replace>[0])}
+            onPress={() => router.replace(option.route as Href)}
           >
             <Text style={styles.optionTitle}>{option.title}</Text>
             <Text style={styles.optionSubtitle}>{option.subtitle}</Text>
@@ -122,3 +122,5 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
 });
+
+
