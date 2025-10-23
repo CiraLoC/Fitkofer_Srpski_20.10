@@ -97,6 +97,13 @@ function RootLayoutNav() {
               headerShown: false,
             }}
           />
+          <Stack.Screen
+            name="profile-edit"
+            options={{
+              title: 'Uredi profil',
+              headerTitleStyle: { fontFamily: 'Inter_600SemiBold', fontSize: 18 },
+            }}
+          />
         </Stack>
       </ThemeProvider>
     </AppStateProvider>

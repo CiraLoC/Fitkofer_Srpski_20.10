@@ -485,7 +485,7 @@ function createRotation(schedule: TrainingPlan['schedule']): DayIntensity[] {
   return rotation;
 }
 
-export function generatePlan(profile: UserProfile): GeneratedPlan {
+export function generatePlan(profile: UserProfile, previousPlan?: GeneratedPlan): GeneratedPlan {
   const bmr = estimateBmr(profile);
   const tdee = bmr * activityMultipliers[profile.activityLevel];
   const adjustment = goalAdjustments[profile.goal];
@@ -498,6 +498,16 @@ export function generatePlan(profile: UserProfile): GeneratedPlan {
   const subscriptionStartDate = startOfDay(new Date());
   const subscriptionEndDate = new Date(subscriptionStartDate);
   subscriptionEndDate.setDate(subscriptionEndDate.getDate() + 29);
+
+  const snapshotCapturedAt = new Date().toISOString();
+  const newSnapshot = {
+    capturedAt: snapshotCapturedAt,
+    profile,
+  };
+  const previousHistory =
+    previousPlan?.profileHistory ??
+    (previousPlan?.profileSnapshot ? [previousPlan.profileSnapshot] : []);
+  const profileHistory = [...previousHistory, newSnapshot];
 
   const extraHabits: Habit[] = [];
   if (profile.stressLevel >= 4) {
@@ -519,6 +529,8 @@ export function generatePlan(profile: UserProfile): GeneratedPlan {
     createdAt: new Date().toISOString(),
     subscriptionStart: subscriptionStartDate.toISOString(),
     subscriptionEnd: subscriptionEndDate.toISOString(),
+    profileSnapshot: newSnapshot,
+    profileHistory,
     training,
     nutrition,
     habits,

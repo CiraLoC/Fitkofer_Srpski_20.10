@@ -25,6 +25,9 @@ export interface UserProfile {
   sleepHours: number;
   stressLevel: StressLevel;
   healthConditions: HealthCondition[];
+  cycleLengthDays?: number | null;
+  periodLengthDays?: number | null;
+  lastPeriodDate?: string | null;
 }
 
 export interface WorkoutExercise {
@@ -116,11 +119,18 @@ export interface HabitPlan {
   weeklyChallenge: string;
 }
 
+export interface ProfileSnapshot {
+  capturedAt: string;
+  profile: UserProfile;
+}
+
 export interface GeneratedPlan {
   id: string;
   createdAt: string;
   subscriptionStart: string;
   subscriptionEnd: string;
+  profileSnapshot: ProfileSnapshot;
+  profileHistory: ProfileSnapshot[];
   training: TrainingPlan;
   nutrition: {
     rotation: DayIntensity[];

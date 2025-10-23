@@ -44,6 +44,7 @@ const initialState: AppState = {
 };
 
 const ONBOARDING_FLAG_BASE = 'fitkofer:onboardingCompleted';
+const MS_IN_DAY = 1000 * 60 * 60 * 24;
 
 type Action =
   | { type: 'SET_PROFILE'; payload: UserProfile }
@@ -87,6 +88,46 @@ function ensureLog(logs: Record<string, DailyLog>, date: string): DailyLog {
   );
 }
 
+function normalizePlan(plan: GeneratedPlan | null, profile: UserProfile | null): GeneratedPlan | null {
+  if (!plan) return null;
+
+  const subscriptionStart = plan.subscriptionStart ?? plan.createdAt;
+  const subscriptionEnd =
+    plan.subscriptionEnd ??
+    new Date(new Date(subscriptionStart).getTime() + 29 * MS_IN_DAY).toISOString();
+
+  const fallbackProfile =
+    profile ??
+    plan.profileSnapshot?.profile ??
+    (plan.profileHistory && plan.profileHistory.length > 0
+      ? plan.profileHistory[plan.profileHistory.length - 1].profile
+      : null);
+
+  const snapshot =
+    plan.profileSnapshot ??
+    (fallbackProfile
+      ? { capturedAt: plan.createdAt, profile: fallbackProfile }
+      : { capturedAt: plan.createdAt, profile: profile as UserProfile });
+
+  const initialHistory =
+    plan.profileHistory && plan.profileHistory.length > 0
+      ? plan.profileHistory
+      : fallbackProfile
+      ? [{ capturedAt: plan.createdAt, profile: fallbackProfile }]
+      : [];
+
+  const mergedHistory = initialHistory.some((item) => item.capturedAt === snapshot.capturedAt)
+    ? initialHistory
+    : [...initialHistory, snapshot];
+
+  return {
+    ...plan,
+    subscriptionStart,
+    subscriptionEnd,
+    profileSnapshot: snapshot,
+    profileHistory: mergedHistory,
+  };
+}
 export function AppStateProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, initialState);
   const [isHydrated, setIsHydrated] = useState(false);
@@ -130,23 +171,26 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
       setSyncStatus('syncing');
       try {
-        const [profile, plan, logs] = await Promise.all([
+        const [profileResult, planResult, logs] = await Promise.all([
           fetchProfile(session.user.id),
           fetchPlan(session.user.id),
           fetchLogs(session.user.id),
         ]);
 
+        const fetchedProfile = profileResult ?? null;
+        const normalizedPlan = normalizePlan(planResult, fetchedProfile);
+
         dispatch({
           type: 'HYDRATE',
           payload: {
-            profile: profile ?? null,
-            plan: plan ?? null,
+            profile: fetchedProfile,
+            plan: normalizedPlan,
             logs,
           },
         });
         setLastError(null);
 
-        const completed = Boolean(plan) || storedFlag;
+        const completed = Boolean(normalizedPlan) || storedFlag;
         setHasCompletedOnboarding(completed);
         if (completed && onboardingKeyRef.current) {
           try {

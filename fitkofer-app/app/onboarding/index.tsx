@@ -78,6 +78,9 @@ const initialProfile: UserProfile = {
   sleepHours: 7,
   stressLevel: 3,
   healthConditions: [],
+  cycleLengthDays: null,
+  periodLengthDays: null,
+  lastPeriodDate: null,
 };
 
 function OptionPill({
@@ -123,7 +126,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 export default function OnboardingScreen() {
   const router = useRouter();
-  const { setProfile, setPlan, session, isHydrated, markOnboardingComplete } = useAppState();
+  const { plan: existingPlan, setProfile, setPlan, session, isHydrated, markOnboardingComplete } = useAppState();
   const [activeStep, setActiveStep] = useState<Step>(steps[0]);
   const [form, setForm] = useState<UserProfile>(initialProfile);
   const [allergyInput, setAllergyInput] = useState('');
@@ -180,13 +183,32 @@ export default function OnboardingScreen() {
   const validateStep = (): boolean => {
     if (activeStep === 'O tebi') {
       if (!form.age || !form.heightCm || !form.weightKg) {
-        setError('Popuni godine, visinu i težinu.');
+        setError('Popuni godine, visinu i tezinu.');
         return false;
+      }
+      const { cycleLengthDays, periodLengthDays, lastPeriodDate } = form;
+      const hasCycleData =
+        cycleLengthDays != null ||
+        periodLengthDays != null ||
+        (lastPeriodDate !== null && lastPeriodDate !== '');
+      if (hasCycleData) {
+        if (cycleLengthDays != null && (cycleLengthDays < 15 || cycleLengthDays > 60)) {
+          setError('Duzina ciklusa treba da bude izmedju 15 i 60 dana.');
+          return false;
+        }
+        if (periodLengthDays != null && (periodLengthDays < 1 || periodLengthDays > 15)) {
+          setError('Trajanje menstruacije treba da bude izmedju 1 i 15 dana.');
+          return false;
+        }
+        if (lastPeriodDate && !/^\d{4}-\d{2}-\d{2}$/.test(lastPeriodDate)) {
+          setError('Unesi datum poslednje menstruacije u formatu YYYY-MM-DD ili ostavi prazno.');
+          return false;
+        }
       }
     }
     if (activeStep === 'Logistika') {
       if (form.equipment.location === 'home' && form.equipment.items.length === 0) {
-        setError('Dodaj barem jednu stavku opreme ili oznaci da radi� bez opreme.');
+        setError('Dodaj barem jednu stavku opreme ili oznaci da radis bez opreme.');
         return false;
       }
       if (!form.daysPerWeek) {
@@ -208,7 +230,7 @@ export default function OnboardingScreen() {
     if (!validateStep()) return;
     try {
       await setProfile(form);
-      const plan = generatePlan(form);
+      const plan = generatePlan(form, existingPlan ?? undefined);
       await setPlan(plan);
       router.replace('/plan-options' as Href);
     } catch (submitError) {
@@ -310,6 +332,60 @@ export default function OnboardingScreen() {
                     onPress={() => setForm((prev) => ({ ...prev, stressLevel: option.value }))}
                   />
                 ))}
+              </View>
+            </Section>
+
+            <Section title="Ciklus (opciono)">
+              <Text style={styles.sectionHint}>
+                Pomozite nam da prilagodimo trening i kalorije. Preskoči ako ne želiš da deliš.
+              </Text>
+              <View style={styles.row}>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Dužina ciklusa (dana)</Text>
+                  <TextInput
+                    keyboardType="number-pad"
+                    placeholder="npr. 28"
+                    value={form.cycleLengthDays ? String(form.cycleLengthDays) : ''}
+                    onChangeText={(text) => {
+                      const cleaned = text.replace(/[^0-9]/g, '');
+                      setForm((prev) => ({
+                        ...prev,
+                        cycleLengthDays: cleaned ? Number(cleaned) : null,
+                      }));
+                    }}
+                    style={styles.input}
+                  />
+                </View>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Trajanje menstruacije (dana)</Text>
+                  <TextInput
+                    keyboardType="number-pad"
+                    placeholder="npr. 5"
+                    value={form.periodLengthDays ? String(form.periodLengthDays) : ''}
+                    onChangeText={(text) => {
+                      const cleaned = text.replace(/[^0-9]/g, '');
+                      setForm((prev) => ({
+                        ...prev,
+                        periodLengthDays: cleaned ? Number(cleaned) : null,
+                      }));
+                    }}
+                    style={styles.input}
+                  />
+                </View>
+              </View>
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Datum poslednje menstruacije</Text>
+                <TextInput
+                  placeholder="YYYY-MM-DD"
+                  value={form.lastPeriodDate ?? ''}
+                  onChangeText={(value) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      lastPeriodDate: value.trim() ? value.trim() : null,
+                    }))
+                  }
+                  style={styles.input}
+                />
               </View>
             </Section>
           </>
@@ -605,6 +681,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginBottom: 12,
     color: Colors.light.text,
+  },
+  sectionHint: {
+    fontFamily: 'Inter_400Regular',
+    color: '#8C8C8C',
+    marginBottom: 12,
   },
   row: {
     flexDirection: 'row',
