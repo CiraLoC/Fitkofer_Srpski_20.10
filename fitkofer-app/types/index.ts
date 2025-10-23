@@ -119,6 +119,8 @@ export interface HabitPlan {
 export interface GeneratedPlan {
   id: string;
   createdAt: string;
+  subscriptionStart: string;
+  subscriptionEnd: string;
   training: TrainingPlan;
   nutrition: {
     rotation: DayIntensity[];
@@ -126,6 +128,45 @@ export interface GeneratedPlan {
     weeklyPlan: DailyNutritionPlan[];
   };
   habits: HabitPlan;
+}
+
+export interface CalendarMealSummary {
+  id: string;
+  title: string;
+  completed: boolean;
+}
+
+export interface CalendarHabitSummary {
+  id: string;
+  title: string;
+  completed: boolean;
+}
+
+export interface CalendarDaySummary {
+  date: string;
+  dayNumber: number;
+  dayLabel: string;
+  inSubscription: boolean;
+  isToday: boolean;
+  isFuture: boolean;
+  dayType?: DayIntensity;
+  workout?: {
+    id: string;
+    title: string;
+    focus: WorkoutSession['focus'];
+    completed: boolean;
+  } | null;
+  meals: CalendarMealSummary[];
+  habits: CalendarHabitSummary[];
+}
+
+export type CalendarWeek = CalendarDaySummary[];
+
+export interface CalendarData {
+  start: string;
+  end: string;
+  weeks: CalendarWeek[];
+  daysByDate: Record<string, CalendarDaySummary>;
 }
 
 export interface DailyLog {
@@ -161,6 +202,7 @@ export interface AppStateMeta {
   syncStatus: SyncStatus;
   lastError?: string | null;
   hasCompletedOnboarding: boolean;
+  monthlyCalendar: CalendarData | null;
 }
 
 export interface AppAuthState {

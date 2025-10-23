@@ -81,6 +81,14 @@ const mealDistribution: Record<
   ],
 };
 
+const MS_IN_DAY = 1000 * 60 * 60 * 24;
+
+function startOfDay(date: Date) {
+  const next = new Date(date);
+  next.setHours(0, 0, 0, 0);
+  return next;
+}
+
 function exerciseMatchesProfile(exercise: WorkoutExercise, profile: UserProfile) {
   if (exercise.preferredLocation && exercise.preferredLocation !== profile.equipment.location) {
     return false;
@@ -217,6 +225,30 @@ function filterMealsByPreference(preference: DietPreference, candidates: MealRec
   }
 }
 
+function filterMealsByHealth(profile: UserProfile, candidates: MealRecipe[]): MealRecipe[] {
+  if (profile.healthConditions.length === 0) {
+    return candidates;
+  }
+
+  const conditions = profile.healthConditions.map((condition) => condition.toLowerCase());
+  const containsAll = (meal: MealRecipe) =>
+    conditions.every((condition) => meal.tags.some((tag) => tag.toLowerCase().includes(condition)));
+  const containsAny = (meal: MealRecipe) =>
+    conditions.some((condition) => meal.tags.some((tag) => tag.toLowerCase().includes(condition)));
+
+  const strictMatches = candidates.filter(containsAll);
+  if (strictMatches.length >= 6) {
+    return strictMatches;
+  }
+
+  const partialMatches = candidates.filter(containsAny);
+  if (partialMatches.length >= 6) {
+    return partialMatches;
+  }
+
+  return candidates;
+}
+
 function matchesRestrictions(profile: UserProfile, meal: MealRecipe): boolean {
   const lowerIngredients = meal.ingredients.map((ingredient) => ingredient.name.toLowerCase()).join(' ');
   const hasAllergy = profile.allergies.some((allergy) => lowerIngredients.includes(allergy.toLowerCase()));
@@ -224,7 +256,12 @@ function matchesRestrictions(profile: UserProfile, meal: MealRecipe): boolean {
   return !hasAllergy && !hasDisliked;
 }
 
-function scoreMealForDay(meal: MealRecipe, targetCalories: number, dayType: DayIntensity): number {
+function scoreMealForDay(
+  meal: MealRecipe,
+  targetCalories: number,
+  dayType: DayIntensity,
+  profile: UserProfile,
+): number {
   const baseScore = Math.abs(meal.calories - targetCalories);
   const tagBoost =
     dayType === 'high'
@@ -233,7 +270,24 @@ function scoreMealForDay(meal: MealRecipe, targetCalories: number, dayType: DayI
         ? meal.tags.includes('low-calorie') ? -30 : 0
         : meal.tags.includes('mid-calorie') ? -20 : 0;
   const proteinBoost = meal.tags.includes('high-protein') ? -10 : 0;
-  return baseScore + tagBoost + proteinBoost;
+
+  let healthScore = 0;
+  if (profile.healthConditions.length > 0) {
+    const conditions = profile.healthConditions.map((condition) => condition.toLowerCase());
+    const hasAll = conditions.every((condition) =>
+      meal.tags.some((tag) => tag.toLowerCase().includes(condition)),
+    );
+    const hasAny = conditions.some((condition) => meal.tags.some((tag) => tag.toLowerCase().includes(condition)));
+    if (hasAll) {
+      healthScore -= 40;
+    } else if (hasAny) {
+      healthScore -= 15;
+    } else {
+      healthScore += 25;
+    }
+  }
+
+  return baseScore + tagBoost + proteinBoost + healthScore;
 }
 
 function pickMealForType(
@@ -242,6 +296,7 @@ function pickMealForType(
   dayType: DayIntensity,
   targetCalories: number,
   usedIds: Set<string>,
+  profile: UserProfile,
 ): MealRecipe | null {
   const candidates = mealsPool.filter((meal) => meal.mealType === mealType);
   if (candidates.length === 0) {
@@ -253,7 +308,7 @@ function pickMealForType(
   const scored = pool
     .map((meal) => ({
       meal,
-      score: scoreMealForDay(meal, targetCalories, dayType),
+      score: scoreMealForDay(meal, targetCalories, dayType, profile),
     }))
     .sort((a, b) => a.score - b.score);
 
@@ -317,6 +372,7 @@ function buildNutrition(profile: UserProfile, weeklyCalories: number, rotation: 
 
   const basePool = meals.filter((meal) => matchesRestrictions(profile, meal));
   const dietFiltered = filterMealsByPreference(profile.dietPreference, basePool);
+  const healthFiltered = filterMealsByHealth(profile, dietFiltered);
   const usedMealIds = new Set<string>();
 
   const weeklyPlan: DailyNutritionPlan[] = rotation.map((dayType, index) => {
@@ -325,8 +381,9 @@ function buildNutrition(profile: UserProfile, weeklyCalories: number, rotation: 
     specs.forEach((spec) => {
       const targetCalories = targets[dayType].calories * spec.ratio;
       const chosen =
-        pickMealForType(dietFiltered, spec.mealType, dayType, targetCalories, usedMealIds) ??
-        pickMealForType(basePool, spec.mealType, dayType, targetCalories, usedMealIds);
+        pickMealForType(healthFiltered, spec.mealType, dayType, targetCalories, usedMealIds, profile) ??
+        pickMealForType(dietFiltered, spec.mealType, dayType, targetCalories, usedMealIds, profile) ??
+        pickMealForType(basePool, spec.mealType, dayType, targetCalories, usedMealIds, profile);
 
       if (chosen) {
         mealsForDay.push(chosen);
@@ -334,7 +391,7 @@ function buildNutrition(profile: UserProfile, weeklyCalories: number, rotation: 
     });
 
     if (mealsForDay.length === 0) {
-      const fallback = dietFiltered.slice(0, 3);
+      const fallback = healthFiltered.slice(0, 3);
       mealsForDay.push(...fallback);
     }
 
@@ -362,7 +419,7 @@ function buildNutrition(profile: UserProfile, weeklyCalories: number, rotation: 
       protein: targets.low.protein,
       carbs: targets.low.carbs,
       fats: targets.low.fats,
-      meals: dietFiltered.filter((meal) => meal.mealType !== 'dessert').slice(0, 3),
+      meals: healthFiltered.filter((meal) => meal.mealType !== 'dessert').slice(0, 3),
       swaps: mealSwaps,
     },
     mid: weeklyPlan.find((plan) => plan.dayType === 'mid') ?? {
@@ -373,7 +430,7 @@ function buildNutrition(profile: UserProfile, weeklyCalories: number, rotation: 
       protein: targets.mid.protein,
       carbs: targets.mid.carbs,
       fats: targets.mid.fats,
-      meals: dietFiltered.slice(0, 4),
+      meals: healthFiltered.slice(0, 4),
       swaps: mealSwaps,
     },
     high: weeklyPlan.find((plan) => plan.dayType === 'high') ?? {
@@ -384,7 +441,7 @@ function buildNutrition(profile: UserProfile, weeklyCalories: number, rotation: 
       protein: targets.high.protein,
       carbs: targets.high.carbs,
       fats: targets.high.fats,
-      meals: dietFiltered.slice(0, 5),
+      meals: healthFiltered.slice(0, 5),
       swaps: mealSwaps,
     },
   };
@@ -438,6 +495,10 @@ export function generatePlan(profile: UserProfile): GeneratedPlan {
   const rotation = createRotation(training.schedule);
   const nutrition = buildNutrition(profile, targetCalories, rotation);
 
+  const subscriptionStartDate = startOfDay(new Date());
+  const subscriptionEndDate = new Date(subscriptionStartDate);
+  subscriptionEndDate.setDate(subscriptionEndDate.getDate() + 29);
+
   const extraHabits: Habit[] = [];
   if (profile.stressLevel >= 4) {
     const gratitude = optionalHabits.find((habit) => habit.id === 'gratitude');
@@ -456,6 +517,8 @@ export function generatePlan(profile: UserProfile): GeneratedPlan {
   return {
     id: `plan-${Date.now()}`,
     createdAt: new Date().toISOString(),
+    subscriptionStart: subscriptionStartDate.toISOString(),
+    subscriptionEnd: subscriptionEndDate.toISOString(),
     training,
     nutrition,
     habits,

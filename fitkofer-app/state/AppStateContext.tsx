@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   createContext,
   ReactNode,
@@ -11,6 +12,7 @@ import {
 } from 'react';
 import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 
+import { createMonthlyCalendar } from '@/lib/calendar/month';
 import type {
   AppActions,
   AppState,
@@ -32,7 +34,6 @@ import {
   upsertPlan,
   upsertProfile,
 } from '@/lib/supabase/storage';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const AppStateContext = createContext<AppStateContextValue | undefined>(undefined);
 
@@ -327,10 +328,24 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         setSession(null);
         dispatch({ type: 'RESET' });
         userIdRef.current = null;
+        setHasCompletedOnboarding(false);
+        if (onboardingKeyRef.current) {
+          try {
+            await AsyncStorage.removeItem(onboardingKeyRef.current);
+          } catch (flagError) {
+            console.warn('[AppState] Failed to remove onboarding flag', flagError);
+          }
+        }
+        onboardingKeyRef.current = null;
       },
     }),
     [state.logs, withSync],
   );
+
+  const monthlyCalendar = useMemo(() => {
+    if (!state.plan) return null;
+    return createMonthlyCalendar(state.plan, state.logs);
+  }, [state.plan, state.logs]);
 
   const value = useMemo<AppStateContextValue>(
     () => ({
@@ -340,9 +355,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       syncStatus,
       lastError,
       hasCompletedOnboarding,
+      monthlyCalendar,
       session,
     }),
-    [actions, hasCompletedOnboarding, isHydrated, lastError, session, state, syncStatus],
+    [actions, hasCompletedOnboarding, isHydrated, lastError, monthlyCalendar, session, state, syncStatus],
   );
 
   return <AppStateContext.Provider value={value}>{children}</AppStateContext.Provider>;

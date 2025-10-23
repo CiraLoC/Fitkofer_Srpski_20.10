@@ -186,7 +186,7 @@ export default function OnboardingScreen() {
     }
     if (activeStep === 'Logistika') {
       if (form.equipment.location === 'home' && form.equipment.items.length === 0) {
-        setError('Dodaj barem jednu stavku opreme ili oznaci da radiš bez opreme.');
+        setError('Dodaj barem jednu stavku opreme ili oznaci da radiï¿½ bez opreme.');
         return false;
       }
       if (!form.daysPerWeek) {

@@ -1,23 +1,55 @@
-import { useMemo } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import Colors from '@/constants/Colors';
 import { useAppState } from '@/state/AppStateContext';
+import type { CalendarDaySummary } from '@/types';
 
-const dayLabels = ['Ponedeljak', 'Utorak', 'Sreda', 'Četvrtak', 'Petak', 'Subota', 'Nedelja'];
+const localeFormatter = new Intl.DateTimeFormat('sr-RS', {
+  day: '2-digit',
+  month: 'short',
+  year: 'numeric',
+});
 
-function startOfWeek(date: Date) {
-  const result = new Date(date);
-  const day = (date.getDay() + 6) % 7;
-  result.setDate(date.getDate() - day);
-  result.setHours(0, 0, 0, 0);
-  return result;
+function formatDate(isoDate: string) {
+  return localeFormatter.format(new Date(isoDate));
+}
+
+function formatFocus(focus: CalendarDaySummary['workout']) {
+  if (!focus) return 'Oporavak / šetnja';
+  return `${focus.title}${focus.completed ? ' ✓' : ''}`;
+}
+
+function formatMealLabel(meal: { id: string; title: string; completed: boolean }) {
+  return `${meal.completed ? '✓' : '○'} ${meal.title}`;
+}
+
+function formatHabitLabel(habit: { id: string; title: string; completed: boolean }) {
+  return `${habit.completed ? '✓' : '○'} ${habit.title}`;
 }
 
 export default function PlannerScreen() {
-  const { plan, logs } = useAppState();
+  const { plan, monthlyCalendar } = useAppState();
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const subscriptionStart = plan?.subscriptionStart ?? plan?.createdAt ?? '';
+  const subscriptionEnd = plan?.subscriptionEnd ?? plan?.createdAt ?? '';
 
-  if (!plan) {
+  useEffect(() => {
+    if (!plan || !monthlyCalendar) return;
+    const todayIso = new Date().toISOString().split('T')[0];
+    const defaultDate =
+      monthlyCalendar.daysByDate[todayIso]?.inSubscription
+        ? todayIso
+        : subscriptionStart.split('T')[0];
+    setSelectedDate(defaultDate);
+  }, [monthlyCalendar, plan, subscriptionStart]);
+
+  const selectedDay = useMemo(
+    () => (selectedDate && monthlyCalendar ? monthlyCalendar.daysByDate[selectedDate] ?? null : null),
+    [monthlyCalendar, selectedDate],
+  );
+
+  if (!plan || !monthlyCalendar) {
     return (
       <View style={styles.centered}>
         <Text style={styles.emptyText}>Plan još nije generisan.</Text>
@@ -25,95 +57,77 @@ export default function PlannerScreen() {
     );
   }
 
-  const start = startOfWeek(new Date());
-  const weekDays = Array.from({ length: 7 }, (_, idx) => {
-    const current = new Date(start);
-    current.setDate(start.getDate() + idx);
-    const iso = current.toISOString().split('T')[0];
-    const scheduleEntry = plan.training.schedule[idx];
-    const session = plan.training.sessions.find((item) => item.id === scheduleEntry?.sessionId);
-    const dayType = plan.nutrition.rotation[idx];
-    const dayPlan = plan.nutrition.weeklyPlan?.[idx] ?? plan.nutrition.planByDayType[dayType];
-    const meals = dayPlan.meals;
-    const habits = plan.habits.dailyHabits;
-    const log = logs[iso];
-    const total =
-      (session ? 1 : 0) + meals.length + habits.length;
-    const completed =
-      (session && log?.workoutsCompleted.includes(session.id) ? 1 : 0) +
-      meals.filter((meal) => log?.mealsCompleted.includes(meal.id)).length +
-      habits.filter((habit) => log?.habitsCompleted.includes(habit.id)).length;
-    const adherence = total > 0 ? Math.round((completed / total) * 100) : 0;
-
-    return {
-      iso,
-      label: dayLabels[idx],
-      session,
-      meals,
-      habits,
-      adherence,
-      energy: log?.energy ?? null,
-    };
-  });
-
-  const weeklyAdherence = useMemo(() => {
-    const values = weekDays.filter((day) => day.adherence > 0).map((day) => day.adherence);
-    if (values.length === 0) return 0;
-    return Math.round(values.reduce((sum, value) => sum + value, 0) / values.length);
-  }, [weekDays]);
-
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.heading}>Planer & evidencija</Text>
+      <Text style={styles.heading}>Mesečni planer</Text>
       <Text style={styles.copy}>
-        Prati izvršenje tokom nedelje. Obeleži treninge, navike i obroke na početnom ekranu – ovde vidiš rezime.
+        Prati plan od {formatDate(subscriptionStart)} do {formatDate(subscriptionEnd)}. Dodirni dan da vidiš
+        trening, obroke i navike.
       </Text>
 
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>Nedeljna usklađenost</Text>
-        <Text style={styles.metric}>{weeklyAdherence}%</Text>
-        <Text style={styles.copy}>
-          Cilj: 60%+ tokom 4 nedelje za stabilan napredak. Fokusiraj se na doslednost, ne perfekciju.
-        </Text>
-      </View>
-
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Nedeljni izazov</Text>
-        <Text style={styles.copy}>{plan.habits.weeklyChallenge}</Text>
-      </View>
-
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Dnevni pregled</Text>
-        <View style={styles.weekList}>
-          {weekDays.map((day) => (
-            <View key={day.iso} style={styles.weekRow}>
-              <Text style={styles.dayLabel}>{day.label}</Text>
-              <View style={styles.weekSummary}>
-                <Text style={styles.summaryText}>Adherencija: {day.adherence}%</Text>
-                <Text style={styles.summaryText}>
-                  Energija: {day.energy ? `nivo ${day.energy}` : '—'}
-                </Text>
-                <Text style={styles.summaryText}>
-                  {day.session ? day.session.title : 'Oporavak / šetnja'}
-                </Text>
-                <Text style={styles.summaryDetail}>
-                  Obroci: {day.meals.length} · Navike: {day.habits.length}
-                </Text>
-              </View>
+        <Text style={styles.cardTitle}>Kalendarski pregled</Text>
+        <View style={styles.calendar}>
+          {monthlyCalendar.weeks.map((week, index) => (
+            <View key={`week-${index}`} style={styles.weekRow}>
+              {week.map((day) => {
+                const isSelected = day.date === selectedDate;
+                const cellStyles = [
+                  styles.dayCell,
+                  !day.inSubscription && styles.dayCellDisabled,
+                  day.isToday && styles.dayCellToday,
+                  isSelected && styles.dayCellSelected,
+                ];
+                return (
+                  <TouchableOpacity
+                    key={day.date}
+                    style={cellStyles}
+                    onPress={() => day.inSubscription && setSelectedDate(day.date)}
+                    disabled={!day.inSubscription}
+                  >
+                    <Text style={[styles.dayNumber, !day.inSubscription && styles.dayNumberMuted]}>
+                      {day.dayNumber}
+                    </Text>
+                    {day.workout && <Text style={styles.dayBadge}>{day.workout.completed ? 'T✓' : 'T'}</Text>}
+                    {day.meals.length > 0 && (
+                      <Text style={styles.dayBadge}>
+                        {day.meals.filter((meal) => meal.completed).length}/{day.meals.length}
+                      </Text>
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
             </View>
           ))}
         </View>
       </View>
 
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Podsetnici</Text>
-        <Text style={styles.copy}>Postavi push notifikacije u Expo Settings (Integracije stižu u sledećoj verziji).</Text>
-        <View style={styles.tipList}>
-          <Text style={styles.tip}>• Jutro (07:30) – Priprema doručka i unos vode.</Text>
-          <Text style={styles.tip}>• Popodne (17:30) – Podsetnik za trening ili šetnju.</Text>
-          <Text style={styles.tip}>• Veče (21:30) – Isključivanje ekrana + NSDR.</Text>
+      {selectedDay ? (
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Detalji za {formatDate(selectedDay.date)}</Text>
+          <Text style={styles.summaryText}>
+            Energetski dan: {selectedDay.dayType ? selectedDay.dayType.toUpperCase() : 'van plana'}
+          </Text>
+          <Text style={styles.summaryText}>Trening: {formatFocus(selectedDay.workout)}</Text>
+
+          <Text style={styles.sectionLabel}>Obroci</Text>
+          {selectedDay.meals.map((meal) => (
+            <Text key={meal.id} style={styles.summaryDetail}>
+              {formatMealLabel(meal)}
+            </Text>
+          ))}
+
+          <Text style={styles.sectionLabel}>Navike</Text>
+          {selectedDay.habits.map((habit) => (
+            <Text key={habit.id} style={styles.summaryDetail}>
+              {formatHabitLabel(habit)}
+            </Text>
+          ))}
+
+          <Text style={styles.sectionLabel}>Nedeljni izazov</Text>
+          <Text style={styles.summaryDetail}>{plan.habits.weeklyChallenge}</Text>
         </View>
-      </View>
+      ) : null}
     </ScrollView>
   );
 }
@@ -162,44 +176,56 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: Colors.light.text,
   },
-  metric: {
-    fontFamily: 'Inter_600SemiBold',
-    fontSize: 32,
-    color: Colors.light.tint,
-  },
-  weekList: {
-    gap: 12,
+  calendar: {
+    gap: 8,
   },
   weekRow: {
     flexDirection: 'row',
-    gap: 14,
+    justifyContent: 'space-between',
+    gap: 8,
   },
-  dayLabel: {
-    fontFamily: 'Inter_600SemiBold',
-    width: 100,
-    color: Colors.light.text,
-  },
-  weekSummary: {
+  dayCell: {
     flex: 1,
-    borderRadius: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: Colors.light.border,
     backgroundColor: Colors.light.background,
-    padding: 12,
+    alignItems: 'center',
     gap: 4,
+  },
+  dayCellDisabled: {
+    opacity: 0.4,
+  },
+  dayCellToday: {
+    borderColor: Colors.light.tint,
+  },
+  dayCellSelected: {
+    backgroundColor: Colors.light.tint,
+    borderColor: Colors.light.tint,
+  },
+  dayNumber: {
+    fontFamily: 'Inter_600SemiBold',
+    color: Colors.light.text,
+  },
+  dayNumberMuted: {
+    color: '#8C8C8C',
+  },
+  dayBadge: {
+    fontFamily: 'Inter_500Medium',
+    fontSize: 12,
+    color: Colors.light.text,
   },
   summaryText: {
     fontFamily: 'Inter_500Medium',
     color: Colors.light.text,
   },
+  sectionLabel: {
+    marginTop: 8,
+    fontFamily: 'Inter_600SemiBold',
+    color: Colors.light.text,
+  },
   summaryDetail: {
-    fontFamily: 'Inter_400Regular',
-    color: '#6B5E58',
-  },
-  tipList: {
-    gap: 8,
-  },
-  tip: {
     fontFamily: 'Inter_400Regular',
     color: '#5C5C5C',
   },
