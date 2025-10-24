@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 
 import Colors from '@/constants/Colors';
+import { formatLocalISODate } from '@/lib/utils/date';
 import { useAppState } from '@/state/AppStateContext';
 import type { DayIntensity, StressLevel } from '@/types';
 
@@ -29,7 +30,7 @@ export default function DashboardScreen() {
   const { plan, logs, toggleWorkoutCompletion, toggleMealCompletion, toggleHabitCompletion, setDailyEnergy } =
     useAppState();
   const today = useMemo(() => new Date(), []);
-  const isoDate = today.toISOString().split('T')[0];
+  const isoDate = formatLocalISODate(today);
   const log = logs[isoDate];
 
   if (!plan) {

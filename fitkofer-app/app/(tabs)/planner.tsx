@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import Colors from '@/constants/Colors';
+import { formatLocalISODate } from '@/lib/utils/date';
 import { useAppState } from '@/state/AppStateContext';
 import type { CalendarDaySummary } from '@/types';
 
@@ -36,11 +37,11 @@ export default function PlannerScreen() {
 
   useEffect(() => {
     if (!plan || !monthlyCalendar) return;
-    const todayIso = new Date().toISOString().split('T')[0];
+    const todayIso = formatLocalISODate(new Date());
     const defaultDate =
       monthlyCalendar.daysByDate[todayIso]?.inSubscription
         ? todayIso
-        : subscriptionStart.split('T')[0];
+        : formatLocalISODate(new Date(subscriptionStart));
     setSelectedDate(defaultDate);
   }, [monthlyCalendar, plan, subscriptionStart]);
 

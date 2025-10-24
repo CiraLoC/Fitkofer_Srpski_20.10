@@ -7,6 +7,7 @@ import type {
   GeneratedPlan,
   WorkoutSession,
 } from '@/types';
+import { formatLocalISODate } from '@/lib/utils/date';
 
 const MS_IN_DAY = 1000 * 60 * 60 * 24;
 const DAY_LABELS = ['Pon', 'Uto', 'Sre', 'Čet', 'Pet', 'Sub', 'Ned'];
@@ -15,10 +16,6 @@ function startOfDay(date: Date) {
   const next = new Date(date);
   next.setHours(0, 0, 0, 0);
   return next;
-}
-
-function toISODate(date: Date) {
-  return date.toISOString().split('T')[0];
 }
 
 function getDayOfWeek(date: Date) {
@@ -79,17 +76,20 @@ export function createMonthlyCalendar(plan: GeneratedPlan, logs: Record<string, 
   });
 
   const habits = plan.habits.dailyHabits;
-  const todayISO = toISODate(startOfDay(new Date()));
+  const todayStart = startOfDay(new Date());
+  const todayISO = formatLocalISODate(todayStart);
 
   const weeks: CalendarData['weeks'] = [];
   const daysByDate: Record<string, CalendarDaySummary> = {};
   let currentWeek: CalendarDaySummary[] = [];
 
   for (let cursor = new Date(calendarStart); cursor <= calendarEnd; cursor.setDate(cursor.getDate() + 1)) {
-    const isoDate = toISODate(cursor);
+    const isoDate = formatLocalISODate(cursor);
+    const legacyIsoDate = cursor.toISOString().split('T')[0];
     const inSubscription = cursor >= subscriptionStart && cursor <= subscriptionEnd;
     const dayOfWeek = getDayOfWeek(cursor);
-    const log = logs[isoDate];
+    const isFuture = cursor > todayStart;
+    const log = isFuture ? undefined : logs[isoDate] ?? logs[legacyIsoDate];
     const completedWorkouts = log?.workoutsCompleted ?? [];
     const completedMeals = new Set(log?.mealsCompleted ?? []);
     const completedHabits = new Set(log?.habitsCompleted ?? []);
@@ -121,7 +121,7 @@ export function createMonthlyCalendar(plan: GeneratedPlan, logs: Record<string, 
       dayLabel: DAY_LABELS[dayOfWeek],
       inSubscription,
       isToday: isoDate === todayISO,
-      isFuture: cursor > startOfDay(new Date()),
+      isFuture,
       dayType,
       workout: workoutSummary,
       meals: mealsForDay.map((meal) => ({

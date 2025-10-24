@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import Colors from '@/constants/Colors';
+import { formatLocalISODate } from '@/lib/utils/date';
 import { useAppState } from '@/state/AppStateContext';
 import type { DayIntensity } from '@/types';
 
@@ -43,7 +44,7 @@ export default function NutritionScreen() {
     const diff = selectedDay - ((current.getDay() + 6) % 7);
     const target = new Date(current);
     target.setDate(current.getDate() + diff);
-    return target.toISOString().split('T')[0];
+    return formatLocalISODate(target);
   }, [selectedDay]);
   const log = logs[isoDate];
 
