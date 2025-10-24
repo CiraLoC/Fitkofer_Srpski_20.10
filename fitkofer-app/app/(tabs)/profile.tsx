@@ -16,6 +16,16 @@ function formatDate(iso: string) {
 export default function ProfileScreen() {
   const router = useRouter();
   const { profile, plan, resetPlan, signOut, session, isHydrated } = useAppState();
+  const recentSnapshots = useMemo(
+    () => (plan ? plan.profileHistory.slice(-5).reverse() : []),
+    [plan?.profileHistory],
+  );
+  const goalLabel = useMemo(() => {
+    if (!profile) return '';
+    if (profile.goal === 'lose') return 'Gubitak masnog tkiva';
+    if (profile.goal === 'gain') return 'Dobitak misica';
+    return 'Odrzavanje';
+  }, [profile]);
 
   useEffect(() => {
     if (isHydrated && !session) {
@@ -37,15 +47,6 @@ export default function ProfileScreen() {
       </View>
     );
   }
-
-  const recentSnapshots = useMemo(() => plan.profileHistory.slice(-5).reverse(), [plan.profileHistory]);
-
-  const goalLabel =
-    profile.goal === 'lose'
-      ? 'Gubitak masnog tkiva'
-      : profile.goal === 'gain'
-      ? 'Dobitak misica'
-      : 'Odrzavanje';
 
   const handleRegenerate = () => {
     resetPlan();

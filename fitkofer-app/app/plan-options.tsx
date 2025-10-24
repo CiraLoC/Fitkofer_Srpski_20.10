@@ -1,48 +1,95 @@
-import { router, type Href } from 'expo-router';
-import { StyleSheet, Text, TouchableOpacity, View, ScrollView } from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useRouter, type Href } from 'expo-router';
 
 import Colors from '@/constants/Colors';
+import { useAppState } from '@/state/AppStateContext';
+import type { PlanSubscriptionTier } from '@/types';
 
-const options = [
+type OptionId = Exclude<PlanSubscriptionTier, 'unselected'>;
+type PlanOption = {
+  id: OptionId;
+  title: string;
+  subtitle: string;
+};
+
+const options: PlanOption[] = [
   {
     id: 'nutrition',
-    title: 'Generisi plan Ishrane',
-    subtitle: 'Personalizovana sedmična rotacija obroka i lista za kupovinu.',
-    route: '/plan-selection/nutrition',
+    title: 'Generisi plan ishrane',
+    subtitle: 'Personalizovana sedmicna rotacija obroka i lista za kupovinu.',
   },
   {
     id: 'training',
     title: 'Generisi plan treninga',
-    subtitle: 'Pametno raspoređeni treninzi sa tvojom dostupnom opremom.',
-    route: '/plan-selection/training',
+    subtitle: 'Pametno rasporedjeni treninzi sa tvojom dostupnom opremom.',
   },
   {
     id: 'habits',
     title: 'Generisi plan uvodjenja zdravih navika',
     subtitle: 'Dnevni i nedeljni izazovi koji grade doslednost.',
-    route: '/plan-selection/habits',
   },
   {
     id: 'full',
     title: 'Generisi ceo paket',
     subtitle: 'Ishrana + trening + navike u jednoj kontrolnoj tabli.',
-    route: '/plan-preview',
   },
 ];
 
 export default function PlanOptionsScreen() {
+  const router = useRouter();
+  const { plan, session, isHydrated, setPlan, markOnboardingComplete } = useAppState();
+  const [pendingOption, setPendingOption] = useState<OptionId | null>(null);
+  const dashboardHref = '/(tabs)/dashboard' satisfies Href;
+
+  useEffect(() => {
+    if (!isHydrated) return;
+    if (!session) {
+      router.replace('/auth');
+      return;
+    }
+    if (plan && plan.subscriptionTier !== 'unselected') {
+      router.replace(dashboardHref);
+    }
+  }, [dashboardHref, isHydrated, plan, router, session]);
+
+  const handleSelect = useCallback(
+    async (option: OptionId) => {
+      if (!plan) {
+        router.replace('/onboarding');
+        return;
+      }
+      try {
+        setPendingOption(option);
+        await setPlan({ ...plan, subscriptionTier: option });
+        await markOnboardingComplete();
+        router.replace(dashboardHref);
+      } catch (error) {
+        console.error('[PlanOptions] Failed to store selection', error);
+        Alert.alert('Greska', 'Nismo uspeli da zapamtimo izbor. Pokusaj ponovo.');
+      } finally {
+        setPendingOption(null);
+      }
+    },
+    [dashboardHref, markOnboardingComplete, plan, router, setPlan],
+  );
+
+  if (!session || !plan) {
+    return null;
+  }
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.heading}>Dobrodošla!</Text>
+      <Text style={styles.heading}>Dobrodosla!</Text>
       <Text style={styles.subheading}>
-        Izaberi kako želiš da nastaviš i preuzmi kontrolu nad zdravljem uz personalizovane planove.
+        Izaberi kako zelis da nastavis i preuzmi kontrolu nad zdravljem uz personalizovane planove.
       </Text>
 
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>Šta želiš da personalizuješ?</Text>
+        <Text style={styles.cardTitle}>Sta zelis da personalizujes?</Text>
         <Text style={styles.cardCopy}>
-          Svaki plan možeš aktivirati zasebno ili uzeti komplet. U sledećem koraku pokazaćemo pogodnosti
-          i opcije pretplate.
+          Svaki plan mozes aktivirati zasebno ili uzeti komplet. U sledecem koraku pokazacemo pogodnosti i opcije
+          pretplate.
         </Text>
       </View>
 
@@ -51,10 +98,12 @@ export default function PlanOptionsScreen() {
           <TouchableOpacity
             key={option.id}
             style={styles.optionButton}
-            onPress={() => router.replace(option.route as Href)}
+            onPress={() => handleSelect(option.id)}
+            disabled={Boolean(pendingOption)}
           >
             <Text style={styles.optionTitle}>{option.title}</Text>
             <Text style={styles.optionSubtitle}>{option.subtitle}</Text>
+            {pendingOption === option.id ? <ActivityIndicator color={Colors.light.tint} /> : null}
           </TouchableOpacity>
         ))}
       </View>
@@ -122,5 +171,3 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
 });
-
-

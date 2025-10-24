@@ -19,6 +19,7 @@ import type {
   AppStateContextValue,
   DailyLog,
   GeneratedPlan,
+  PlanSubscriptionTier,
   SyncStatus,
   StressLevel,
   UserProfile,
@@ -95,6 +96,7 @@ function normalizePlan(plan: GeneratedPlan | null, profile: UserProfile | null):
   const subscriptionEnd =
     plan.subscriptionEnd ??
     new Date(new Date(subscriptionStart).getTime() + 29 * MS_IN_DAY).toISOString();
+  const subscriptionTier: PlanSubscriptionTier = plan.subscriptionTier ?? 'unselected';
 
   const fallbackProfile =
     profile ??
@@ -124,6 +126,7 @@ function normalizePlan(plan: GeneratedPlan | null, profile: UserProfile | null):
     ...plan,
     subscriptionStart,
     subscriptionEnd,
+    subscriptionTier,
     profileSnapshot: snapshot,
     profileHistory: mergedHistory,
   };

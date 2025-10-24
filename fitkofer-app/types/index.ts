@@ -5,6 +5,7 @@ export type ActivityLevel = 'sedentary' | 'light' | 'moderate' | 'high';
 export type DietPreference = 'omnivore' | 'pescatarian' | 'vegetarian' | 'mixed' | 'keto' | 'carnivore';
 export type StressLevel = 1 | 2 | 3 | 4 | 5;
 export type DayIntensity = 'low' | 'mid' | 'high';
+export type PlanSubscriptionTier = 'unselected' | 'nutrition' | 'training' | 'habits' | 'full';
 
 export type HealthCondition = 'IR' | 'Hashimoto' | 'PCOS';
 
@@ -129,6 +130,7 @@ export interface GeneratedPlan {
   createdAt: string;
   subscriptionStart: string;
   subscriptionEnd: string;
+  subscriptionTier: PlanSubscriptionTier;
   profileSnapshot: ProfileSnapshot;
   profileHistory: ProfileSnapshot[];
   training: TrainingPlan;

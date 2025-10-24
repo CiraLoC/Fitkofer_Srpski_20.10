@@ -9,7 +9,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import Colors from '@/constants/Colors';
 import { supabase } from '@/lib/supabase/client';
@@ -20,12 +20,19 @@ type AuthMode = 'signIn' | 'signUp';
 export default function AuthScreen() {
   const router = useRouter();
   const { session, isHydrated } = useAppState();
+  const params = useLocalSearchParams<{ mode?: string }>();
   const [mode, setMode] = useState<AuthMode>('signIn');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (params?.mode === 'signUp') {
+      setMode('signUp');
+    }
+  }, [params]);
 
   useEffect(() => {
     if (isHydrated && session) {

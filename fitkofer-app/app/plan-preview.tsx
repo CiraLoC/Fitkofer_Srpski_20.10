@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useRouter, type Href } from 'expo-router';
 
@@ -16,7 +16,8 @@ const intensityLabels: Record<DayIntensity, string> = {
 
 export default function PlanPreviewScreen() {
   const router = useRouter();
-  const { plan, profile, session, isHydrated } = useAppState();
+  const { plan, profile, session, isHydrated, setPlan, markOnboardingComplete } = useAppState();
+  const [saving, setSaving] = useState(false);
   const dashboardHref = '/(tabs)/dashboard' satisfies Href;
 
   useEffect(() => {
@@ -45,9 +46,24 @@ export default function PlanPreviewScreen() {
     );
   }
 
-  const handleStart = () => {
-    router.replace(dashboardHref);
-  };
+  const handleStart = useCallback(async () => {
+    if (!plan) {
+      router.replace('/onboarding');
+      return;
+    }
+    try {
+      setSaving(true);
+      if (plan.subscriptionTier !== 'full') {
+        await setPlan({ ...plan, subscriptionTier: 'full' });
+      }
+      await markOnboardingComplete();
+    } catch (error) {
+      console.error('[PlanPreview] Failed to mark plan as full subscription', error);
+    } finally {
+      setSaving(false);
+      router.replace(dashboardHref);
+    }
+  }, [dashboardHref, markOnboardingComplete, plan, router, setPlan]);
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -110,7 +126,7 @@ export default function PlanPreviewScreen() {
         </View>
       </View>
 
-      <TouchableOpacity style={styles.primaryButton} onPress={handleStart}>
+      <TouchableOpacity style={styles.primaryButton} onPress={() => void handleStart()} disabled={saving}>
         <Text style={styles.primaryLabel}>Idi na dashboard</Text>
       </TouchableOpacity>
     </ScrollView>

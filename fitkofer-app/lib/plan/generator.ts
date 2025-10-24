@@ -8,6 +8,7 @@ import type {
   GeneratedPlan,
   Habit,
   MealRecipe,
+  PlanSubscriptionTier,
   TrainingPlan,
   UserProfile,
   WorkoutExercise,
@@ -524,11 +525,14 @@ export function generatePlan(profile: UserProfile, previousPlan?: GeneratedPlan)
     weeklyChallenge: '35k koraka + 3 treninga ove nedelje',
   };
 
+  const subscriptionTier: PlanSubscriptionTier = previousPlan?.subscriptionTier ?? 'unselected';
+
   return {
     id: `plan-${Date.now()}`,
     createdAt: new Date().toISOString(),
     subscriptionStart: subscriptionStartDate.toISOString(),
     subscriptionEnd: subscriptionEndDate.toISOString(),
+    subscriptionTier,
     profileSnapshot: newSnapshot,
     profileHistory,
     training,

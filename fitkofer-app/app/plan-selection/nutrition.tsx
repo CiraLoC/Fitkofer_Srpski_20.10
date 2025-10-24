@@ -1,9 +1,37 @@
-import { router, type Href } from 'expo-router';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useCallback, useState } from 'react';
+import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useRouter, type Href } from 'expo-router';
 
 import Colors from '@/constants/Colors';
+import { useAppState } from '@/state/AppStateContext';
 
 export default function NutritionPlanScreen() {
+  const router = useRouter();
+  const { plan, setPlan, markOnboardingComplete } = useAppState();
+  const [saving, setSaving] = useState(false);
+  const dashboardHref = '/(tabs)/dashboard' satisfies Href;
+
+  const activatePlan = useCallback(
+    async (tier: 'nutrition' | 'full') => {
+      if (!plan) {
+        router.replace('/onboarding');
+        return;
+      }
+      try {
+        setSaving(true);
+        await setPlan({ ...plan, subscriptionTier: tier });
+        await markOnboardingComplete();
+        router.replace(dashboardHref);
+      } catch (error) {
+        console.error('[NutritionPlan] Failed to update subscription tier', error);
+        Alert.alert('Greska', 'Plan nije sacuvan. Pokusaj ponovo.');
+      } finally {
+        setSaving(false);
+      }
+    },
+    [dashboardHref, markOnboardingComplete, plan, router, setPlan],
+  );
+
   return (
     <View style={styles.container}>
       <Text style={styles.heading}>Plan ishrane spreman!</Text>
@@ -11,15 +39,12 @@ export default function NutritionPlanScreen() {
         Pogledaj personalizovanu rotaciju obroka, makroe i listu za kupovinu za narednih 7 dana.
       </Text>
 
-      <TouchableOpacity
-        style={styles.primaryButton}
-        onPress={() => router.replace('/(tabs)/nutrition' as Href)}
-      >
+      <TouchableOpacity style={styles.primaryButton} onPress={() => activatePlan('nutrition')} disabled={saving}>
         <Text style={styles.primaryLabel}>Otvori panel za ishranu</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.secondaryButton} onPress={() => router.replace('/plan-preview' as Href)}>
-        <Text style={styles.secondaryLabel}>Ipak želim ceo paket</Text>
+      <TouchableOpacity style={styles.secondaryButton} onPress={() => activatePlan('full')} disabled={saving}>
+        <Text style={styles.secondaryLabel}>Ipak zelim ceo paket</Text>
       </TouchableOpacity>
     </View>
   );
@@ -66,6 +91,3 @@ const styles = StyleSheet.create({
     color: Colors.light.text,
   },
 });
-
-
-

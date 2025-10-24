@@ -1,25 +1,50 @@
-import { router, type Href } from 'expo-router';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useCallback, useState } from 'react';
+import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useRouter, type Href } from 'expo-router';
 
 import Colors from '@/constants/Colors';
+import { useAppState } from '@/state/AppStateContext';
 
 export default function TrainingPlanScreen() {
+  const router = useRouter();
+  const { plan, setPlan, markOnboardingComplete } = useAppState();
+  const [saving, setSaving] = useState(false);
+  const dashboardHref = '/(tabs)/dashboard' satisfies Href;
+
+  const activatePlan = useCallback(
+    async (tier: 'training' | 'full') => {
+      if (!plan) {
+        router.replace('/onboarding');
+        return;
+      }
+      try {
+        setSaving(true);
+        await setPlan({ ...plan, subscriptionTier: tier });
+        await markOnboardingComplete();
+        router.replace(dashboardHref);
+      } catch (error) {
+        console.error('[TrainingPlan] Failed to update subscription tier', error);
+        Alert.alert('Greska', 'Plan nije sacuvan. Pokusaj ponovo.');
+      } finally {
+        setSaving(false);
+      }
+    },
+    [dashboardHref, markOnboardingComplete, plan, router, setPlan],
+  );
+
   return (
     <View style={styles.container}>
       <Text style={styles.heading}>Plan treninga spreman!</Text>
       <Text style={styles.copy}>
-        Čekaju te personalizovani treninzi usklađeni sa brojem dana i opremom koju imaš na raspolaganju.
+        Cekaju te personalizovani treninzi uskladjeni sa brojem dana i opremom koju imas na raspolaganju.
       </Text>
 
-      <TouchableOpacity
-        style={styles.primaryButton}
-        onPress={() => router.replace('/(tabs)/workouts' as Href)}
-      >
+      <TouchableOpacity style={styles.primaryButton} onPress={() => activatePlan('training')} disabled={saving}>
         <Text style={styles.primaryLabel}>Otvori panel za treninge</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.secondaryButton} onPress={() => router.replace('/plan-preview' as Href)}>
-        <Text style={styles.secondaryLabel}>Ipak želim ceo paket</Text>
+      <TouchableOpacity style={styles.secondaryButton} onPress={() => activatePlan('full')} disabled={saving}>
+        <Text style={styles.secondaryLabel}>Ipak zelim ceo paket</Text>
       </TouchableOpacity>
     </View>
   );
@@ -66,6 +91,3 @@ const styles = StyleSheet.create({
     color: Colors.light.text,
   },
 });
-
-
-
