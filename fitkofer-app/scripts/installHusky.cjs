@@ -29,10 +29,10 @@ if (!gitRoot) {
   process.exit(0);
 }
 
-const hooksDir = path.join(gitRoot, 'fitkofer-app', '.husky');
+const hooksDir = path.join(gitRoot, '.husky');
 if (huskyInstall) {
   huskyInstall(hooksDir);
   console.log(`[husky] Hooks installed at ${hooksDir}`);
 } else {
-  console.warn('[husky] Unable to run install hook. Please run "npx husky install fitkofer-app/.husky" manually.');
+  console.warn('[husky] Unable to run install hook. Please run "npx husky install .husky" from the repo root.');
 }
