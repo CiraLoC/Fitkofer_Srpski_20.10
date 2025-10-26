@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -151,6 +151,18 @@ export default function OnboardingScreen() {
   const [allergyInput, setAllergyInput] = useState("");
   const [dislikeInput, setDislikeInput] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
+  const clearFieldError = useCallback((field: string) => {
+    setFieldErrors((prev) => {
+      if (!prev[field]) {
+        return prev;
+      }
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  }, []);
 
   const stepIndex = useMemo(() => steps.indexOf(activeStep), [activeStep]);
 
@@ -168,6 +180,7 @@ export default function OnboardingScreen() {
     if (stepIndex < steps.length - 1) {
       setActiveStep(steps[stepIndex + 1]);
       setError(null);
+      setFieldErrors({});
     }
   };
 
@@ -175,6 +188,7 @@ export default function OnboardingScreen() {
     if (stepIndex > 0) {
       setActiveStep(steps[stepIndex - 1]);
       setError(null);
+      setFieldErrors({});
     }
   };
 
@@ -204,54 +218,94 @@ export default function OnboardingScreen() {
   };
 
   const validateStep = (): boolean => {
+    const errors: Record<string, string> = {};
+
     if (activeStep === "O tebi") {
-      if (!form.age || !form.heightCm || !form.weightKg) {
-        setError("Popuni godine, visinu i tezinu.");
-        return false;
+      if (!form.age || form.age < 13 || form.age > 100) {
+        errors.age = "Unesi godine (13-100).";
       }
+      if (!form.heightCm || form.heightCm < 120 || form.heightCm > 220) {
+        errors.heightCm = "Unesi visinu u centimetrima.";
+      }
+      if (!form.weightKg || form.weightKg < 35 || form.weightKg > 200) {
+        errors.weightKg = "Unesi tezinu u kilogramima.";
+      }
+      if (!form.sleepHours || form.sleepHours < 3 || form.sleepHours > 12) {
+        errors.sleepHours = "Unesi sati sna (3-12).";
+      }
+      if (!form.stressLevel) {
+        errors.stressLevel = "Oznaci nivo stresa.";
+      }
+
       const { cycleLengthDays, periodLengthDays, lastPeriodDate } = form;
       const hasCycleData =
         cycleLengthDays != null ||
         periodLengthDays != null ||
-        (lastPeriodDate !== null && lastPeriodDate !== "");
+        (lastPeriodDate ?? "") !== "";
       if (hasCycleData) {
         if (
           cycleLengthDays != null &&
           (cycleLengthDays < 15 || cycleLengthDays > 60)
         ) {
-          setError("Duzina ciklusa treba da bude izmedju 15 i 60 dana.");
-          return false;
+          errors.cycleLengthDays =
+            "Duzina ciklusa treba da bude izmedju 15 i 60 dana.";
         }
         if (
           periodLengthDays != null &&
           (periodLengthDays < 1 || periodLengthDays > 15)
         ) {
-          setError("Trajanje menstruacije treba da bude izmedju 1 i 15 dana.");
-          return false;
+          errors.periodLengthDays =
+            "Trajanje menstruacije treba da bude izmedju 1 i 15 dana.";
         }
-        if (lastPeriodDate && !/^\d{4}-\d{2}-\d{2}$/.test(lastPeriodDate)) {
-          setError(
-            "Unesi datum poslednje menstruacije u formatu YYYY-MM-DD ili ostavi prazno.",
-          );
-          return false;
+        if (
+          lastPeriodDate &&
+          !/^\d{4}-\d{2}-\d{2}$/.test(lastPeriodDate ?? "")
+        ) {
+          errors.lastPeriodDate =
+            "Koristi format YYYY-MM-DD ili ostavi prazno.";
         }
       }
     }
+
+    if (activeStep === "Ciljevi") {
+      if (!form.goal) {
+        errors.goal = "Odaberi glavni cilj.";
+      }
+      if (!form.activityLevel) {
+        errors.activityLevel = "Oznaci nivo aktivnosti.";
+      }
+    }
+
+    if (activeStep === "Ishrana") {
+      if (!form.dietPreference) {
+        errors.dietPreference = "Izaberi preferenciju ishrane.";
+      }
+    }
+
     if (activeStep === "Logistika") {
+      if (!form.equipment.location) {
+        errors.equipmentLocation = "Izaberi lokaciju treninga.";
+      }
       if (
         form.equipment.location === "home" &&
         form.equipment.items.length === 0
       ) {
-        setError(
-          "Dodaj barem jednu stavku opreme ili oznaci da radis bez opreme.",
-        );
-        return false;
+        errors.equipmentItems =
+          "Dodaj barem jednu stavku opreme ili oznaci 'Bez opreme'.";
       }
       if (!form.daysPerWeek) {
-        setError("Izaberi broj trening dana.");
-        return false;
+        errors.daysPerWeek = "Izaberi broj trening dana.";
       }
     }
+
+    const hasErrors = Object.keys(errors).length > 0;
+    if (hasErrors) {
+      setFieldErrors(errors);
+      setError("Ispravi obelezena polja pre nastavka.");
+      return false;
+    }
+
+    setFieldErrors({});
     setError(null);
     return true;
   };
@@ -311,42 +365,70 @@ export default function OnboardingScreen() {
                   <TextInput
                     keyboardType="number-pad"
                     value={String(form.age)}
-                    onChangeText={(text) =>
+                    onChangeText={(text) => {
+                      clearFieldError("age");
                       setForm((prev) => ({
                         ...prev,
                         age: Number(text.replace(/[^0-9]/g, "")) || 0,
-                      }))
-                    }
-                    style={styles.input}
+                      }));
+                    }}
+                    onFocus={() => clearFieldError("age")}
+                    style={[
+                      styles.input,
+                      fieldErrors.age ? styles.inputError : undefined,
+                    ]}
                   />
+                  {fieldErrors.age ? (
+                    <Text style={styles.fieldError}>{fieldErrors.age}</Text>
+                  ) : null}
                 </View>
                 <View style={styles.inputGroup}>
                   <Text style={styles.label}>Visina (cm)</Text>
                   <TextInput
                     keyboardType="number-pad"
                     value={String(form.heightCm)}
-                    onChangeText={(text) =>
+                    onChangeText={(text) => {
+                      clearFieldError("heightCm");
                       setForm((prev) => ({
                         ...prev,
                         heightCm: Number(text.replace(/[^0-9]/g, "")) || 0,
-                      }))
-                    }
-                    style={styles.input}
+                      }));
+                    }}
+                    onFocus={() => clearFieldError("heightCm")}
+                    style={[
+                      styles.input,
+                      fieldErrors.heightCm ? styles.inputError : undefined,
+                    ]}
                   />
+                  {fieldErrors.heightCm ? (
+                    <Text style={styles.fieldError}>
+                      {fieldErrors.heightCm}
+                    </Text>
+                  ) : null}
                 </View>
                 <View style={styles.inputGroup}>
                   <Text style={styles.label}>Težina (kg)</Text>
                   <TextInput
                     keyboardType="decimal-pad"
                     value={String(form.weightKg)}
-                    onChangeText={(text) =>
+                    onChangeText={(text) => {
+                      clearFieldError("weightKg");
                       setForm((prev) => ({
                         ...prev,
                         weightKg: Number(text.replace(/[^0-9.]/g, "")) || 0,
-                      }))
-                    }
-                    style={styles.input}
+                      }));
+                    }}
+                    onFocus={() => clearFieldError("weightKg")}
+                    style={[
+                      styles.input,
+                      fieldErrors.weightKg ? styles.inputError : undefined,
+                    ]}
                   />
+                  {fieldErrors.weightKg ? (
+                    <Text style={styles.fieldError}>
+                      {fieldErrors.weightKg}
+                    </Text>
+                  ) : null}
                 </View>
               </View>
             </Section>
@@ -358,31 +440,50 @@ export default function OnboardingScreen() {
                   <TextInput
                     keyboardType="decimal-pad"
                     value={String(form.sleepHours)}
-                    onChangeText={(text) =>
+                    onChangeText={(text) => {
+                      clearFieldError("sleepHours");
                       setForm((prev) => ({
                         ...prev,
                         sleepHours: Number(text.replace(/[^0-9.]/g, "")) || 0,
-                      }))
-                    }
-                    style={styles.input}
+                      }));
+                    }}
+                    onFocus={() => clearFieldError("sleepHours")}
+                    style={[
+                      styles.input,
+                      fieldErrors.sleepHours ? styles.inputError : undefined,
+                    ]}
                   />
+                  {fieldErrors.sleepHours ? (
+                    <Text style={styles.fieldError}>
+                      {fieldErrors.sleepHours}
+                    </Text>
+                  ) : null}
                 </View>
               </View>
-              <View style={styles.pillRow}>
+              <View
+                style={[
+                  styles.pillRow,
+                  fieldErrors.stressLevel ? styles.pillRowError : undefined,
+                ]}
+              >
                 {stressOptions.map((option) => (
                   <OptionPill
                     key={option.value}
                     label={option.label}
                     selected={form.stressLevel === option.value}
-                    onPress={() =>
+                    onPress={() => {
+                      clearFieldError("stressLevel");
                       setForm((prev) => ({
                         ...prev,
                         stressLevel: option.value,
-                      }))
-                    }
+                      }));
+                    }}
                   />
                 ))}
               </View>
+              {fieldErrors.stressLevel ? (
+                <Text style={styles.fieldError}>{fieldErrors.stressLevel}</Text>
+              ) : null}
             </Section>
 
             <Section title="Ciklus (opciono)">
@@ -400,14 +501,26 @@ export default function OnboardingScreen() {
                       form.cycleLengthDays ? String(form.cycleLengthDays) : ""
                     }
                     onChangeText={(text) => {
+                      clearFieldError("cycleLengthDays");
                       const cleaned = text.replace(/[^0-9]/g, "");
                       setForm((prev) => ({
                         ...prev,
                         cycleLengthDays: cleaned ? Number(cleaned) : null,
                       }));
                     }}
-                    style={styles.input}
+                    onFocus={() => clearFieldError("cycleLengthDays")}
+                    style={[
+                      styles.input,
+                      fieldErrors.cycleLengthDays
+                        ? styles.inputError
+                        : undefined,
+                    ]}
                   />
+                  {fieldErrors.cycleLengthDays ? (
+                    <Text style={styles.fieldError}>
+                      {fieldErrors.cycleLengthDays}
+                    </Text>
+                  ) : null}
                 </View>
                 <View style={styles.inputGroup}>
                   <Text style={styles.label}>Trajanje menstruacije (dana)</Text>
@@ -418,14 +531,26 @@ export default function OnboardingScreen() {
                       form.periodLengthDays ? String(form.periodLengthDays) : ""
                     }
                     onChangeText={(text) => {
+                      clearFieldError("periodLengthDays");
                       const cleaned = text.replace(/[^0-9]/g, "");
                       setForm((prev) => ({
                         ...prev,
                         periodLengthDays: cleaned ? Number(cleaned) : null,
                       }));
                     }}
-                    style={styles.input}
+                    onFocus={() => clearFieldError("periodLengthDays")}
+                    style={[
+                      styles.input,
+                      fieldErrors.periodLengthDays
+                        ? styles.inputError
+                        : undefined,
+                    ]}
                   />
+                  {fieldErrors.periodLengthDays ? (
+                    <Text style={styles.fieldError}>
+                      {fieldErrors.periodLengthDays}
+                    </Text>
+                  ) : null}
                 </View>
               </View>
               <View style={styles.inputGroup}>
@@ -439,8 +564,17 @@ export default function OnboardingScreen() {
                       lastPeriodDate: value.trim() ? value.trim() : null,
                     }))
                   }
-                  style={styles.input}
+                  onFocus={() => clearFieldError("lastPeriodDate")}
+                  style={[
+                    styles.input,
+                    fieldErrors.lastPeriodDate ? styles.inputError : undefined,
+                  ]}
                 />
+                {fieldErrors.lastPeriodDate ? (
+                  <Text style={styles.fieldError}>
+                    {fieldErrors.lastPeriodDate}
+                  </Text>
+                ) : null}
               </View>
             </Section>
           </>
@@ -449,36 +583,56 @@ export default function OnboardingScreen() {
         {activeStep === "Ciljevi" && (
           <>
             <Section title="Glavni cilj">
-              <View style={styles.pillRow}>
+              <View
+                style={[
+                  styles.pillRow,
+                  fieldErrors.goal ? styles.pillRowError : undefined,
+                ]}
+              >
                 {goals.map((goal) => (
                   <OptionPill
                     key={goal.value}
                     label={goal.label}
                     selected={form.goal === goal.value}
-                    onPress={() =>
-                      setForm((prev) => ({ ...prev, goal: goal.value }))
-                    }
+                    onPress={() => {
+                      clearFieldError("goal");
+                      setForm((prev) => ({ ...prev, goal: goal.value }));
+                    }}
                   />
                 ))}
               </View>
+              {fieldErrors.goal ? (
+                <Text style={styles.fieldError}>{fieldErrors.goal}</Text>
+              ) : null}
             </Section>
 
             <Section title="Aktivnost">
-              <View style={styles.pillColumn}>
+              <View
+                style={[
+                  styles.pillColumn,
+                  fieldErrors.activityLevel ? styles.pillRowError : undefined,
+                ]}
+              >
                 {activities.map((activity) => (
                   <OptionPill
                     key={activity.value}
                     label={activity.label}
                     selected={form.activityLevel === activity.value}
-                    onPress={() =>
+                    onPress={() => {
+                      clearFieldError("activityLevel");
                       setForm((prev) => ({
                         ...prev,
                         activityLevel: activity.value,
-                      }))
-                    }
+                      }));
+                    }}
                   />
                 ))}
               </View>
+              {fieldErrors.activityLevel ? (
+                <Text style={styles.fieldError}>
+                  {fieldErrors.activityLevel}
+                </Text>
+              ) : null}
             </Section>
 
             <Section title="Zdravstveni uslovi">
@@ -513,21 +667,32 @@ export default function OnboardingScreen() {
         {activeStep === "Ishrana" && (
           <>
             <Section title="Preferencije">
-              <View style={styles.pillRow}>
+              <View
+                style={[
+                  styles.pillRow,
+                  fieldErrors.dietPreference ? styles.pillRowError : undefined,
+                ]}
+              >
                 {dietOptions.map((option) => (
                   <OptionPill
                     key={option.value}
                     label={option.label}
                     selected={form.dietPreference === option.value}
-                    onPress={() =>
+                    onPress={() => {
+                      clearFieldError("dietPreference");
                       setForm((prev) => ({
                         ...prev,
                         dietPreference: option.value,
-                      }))
-                    }
+                      }));
+                    }}
                   />
                 ))}
               </View>
+              {fieldErrors.dietPreference ? (
+                <Text style={styles.fieldError}>
+                  {fieldErrors.dietPreference}
+                </Text>
+              ) : null}
             </Section>
 
             <Section title="Alergije">
@@ -591,11 +756,19 @@ export default function OnboardingScreen() {
         {activeStep === "Logistika" && (
           <>
             <Section title="Gde treniras?">
-              <View style={styles.pillRow}>
+              <View
+                style={[
+                  styles.pillRow,
+                  fieldErrors.equipmentLocation
+                    ? styles.pillRowError
+                    : undefined,
+                ]}
+              >
                 <OptionPill
                   label="Kuci"
                   selected={form.equipment.location === "home"}
-                  onPress={() =>
+                  onPress={() => {
+                    clearFieldError("equipmentLocation");
                     setForm((prev) => ({
                       ...prev,
                       equipment: {
@@ -603,13 +776,14 @@ export default function OnboardingScreen() {
                         location: "home",
                         items: [],
                       },
-                    }))
-                  }
+                    }));
+                  }}
                 />
                 <OptionPill
                   label="Teretana"
                   selected={form.equipment.location === "gym"}
-                  onPress={() =>
+                  onPress={() => {
+                    clearFieldError("equipmentLocation");
                     setForm((prev) => ({
                       ...prev,
                       equipment: {
@@ -617,31 +791,49 @@ export default function OnboardingScreen() {
                         location: "gym",
                         items: [],
                       },
-                    }))
-                  }
+                    }));
+                  }}
                 />
               </View>
+              {fieldErrors.equipmentLocation ? (
+                <Text style={styles.fieldError}>
+                  {fieldErrors.equipmentLocation}
+                </Text>
+              ) : null}
             </Section>
 
             <Section title="Dostupna oprema">
-              <View style={styles.tagContainer}>
+              <View
+                style={[
+                  styles.tagContainer,
+                  fieldErrors.equipmentItems
+                    ? styles.tagContainerError
+                    : undefined,
+                ]}
+              >
                 {equipmentItems.map((item) => {
                   const selected = form.equipment.items.includes(item);
                   return (
                     <TouchableOpacity
                       key={item}
                       onPress={() =>
-                        setForm((prev) => ({
-                          ...prev,
-                          equipment: {
-                            ...prev.equipment,
-                            items: selected
-                              ? prev.equipment.items.filter(
-                                  (option) => option !== item,
-                                )
-                              : [...prev.equipment.items, item],
-                          },
-                        }))
+                        setForm((prev) => {
+                          const nextItems = selected
+                            ? prev.equipment.items.filter(
+                                (option) => option !== item,
+                              )
+                            : [...prev.equipment.items, item];
+                          if (nextItems.length > 0) {
+                            clearFieldError("equipmentItems");
+                          }
+                          return {
+                            ...prev,
+                            equipment: {
+                              ...prev.equipment,
+                              items: nextItems,
+                            },
+                          };
+                        })
                       }
                       style={[
                         styles.tag,
@@ -660,24 +852,38 @@ export default function OnboardingScreen() {
                   );
                 })}
               </View>
+              {fieldErrors.equipmentItems ? (
+                <Text style={styles.fieldError}>
+                  {fieldErrors.equipmentItems}
+                </Text>
+              ) : null}
             </Section>
 
             <Section title="Koliko dana mozes da treniras?">
-              <View style={styles.pillRow}>
+              <View
+                style={[
+                  styles.pillRow,
+                  fieldErrors.daysPerWeek ? styles.pillRowError : undefined,
+                ]}
+              >
                 {[2, 3, 4, 5].map((day) => (
                   <OptionPill
                     key={day}
                     label={`${day}x nedeljno`}
                     selected={form.daysPerWeek === day}
-                    onPress={() =>
+                    onPress={() => {
+                      clearFieldError("daysPerWeek");
                       setForm((prev) => ({
                         ...prev,
                         daysPerWeek: day as UserProfile["daysPerWeek"],
-                      }))
-                    }
+                      }));
+                    }}
                   />
                 ))}
               </View>
+              {fieldErrors.daysPerWeek ? (
+                <Text style={styles.fieldError}>{fieldErrors.daysPerWeek}</Text>
+              ) : null}
             </Section>
 
             <Section title="Spremna si!">
@@ -810,10 +1016,19 @@ const styles = StyleSheet.create({
     borderColor: Colors.light.border,
     color: Colors.light.text,
   },
+  inputError: {
+    borderColor: "#B12E38",
+  },
   pillRow: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 12,
+  },
+  pillRowError: {
+    borderColor: "#B12E38",
+    borderWidth: 1,
+    borderRadius: 16,
+    padding: 12,
   },
   pillColumn: {
     gap: 12,
@@ -868,6 +1083,12 @@ const styles = StyleSheet.create({
   tagSelected: {
     backgroundColor: Colors.light.tint,
   },
+  tagContainerError: {
+    borderColor: "#B12E38",
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 8,
+  },
   tagText: {
     fontFamily: "Inter_500Medium",
     color: Colors.light.text,
@@ -885,6 +1106,11 @@ const styles = StyleSheet.create({
     color: "#AF1F1F",
     fontFamily: "Inter_500Medium",
     marginBottom: 16,
+  },
+  fieldError: {
+    color: "#B12E38",
+    fontFamily: "Inter_500Medium",
+    marginTop: 6,
   },
   actions: {
     flexDirection: "row",

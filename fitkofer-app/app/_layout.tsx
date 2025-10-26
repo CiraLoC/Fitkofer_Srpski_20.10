@@ -20,6 +20,8 @@ import {
   Inter_600SemiBold,
 } from "@expo-google-fonts/inter";
 
+import { initSentry } from "@/lib/logging/sentry";
+import { initAnalytics } from "@/lib/logging/analytics";
 import { AppStateProvider } from "@/state/AppStateContext";
 import { useColorScheme } from "@/components/useColorScheme";
 
@@ -32,6 +34,9 @@ export const unstable_settings = {
   // Ensure that reloading on `/modal` keeps a back button present.
   initialRouteName: "(tabs)",
 };
+
+initSentry();
+initAnalytics();
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();

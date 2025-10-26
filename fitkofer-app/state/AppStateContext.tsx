@@ -35,6 +35,7 @@ import {
   upsertPlan,
   upsertProfile,
 } from "@/lib/supabase/storage";
+import { setAnalyticsUser, trackEvent } from "@/lib/logging/analytics";
 
 const AppStateContext = createContext<AppStateContextValue | undefined>(
   undefined,
@@ -257,6 +258,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     };
   }, [handleError, hydrate]);
 
+  useEffect(() => {
+    setAnalyticsUser(session?.user?.id ?? null);
+  }, [session?.user?.id]);
+
   const withSync = useCallback(
     async (operation: () => Promise<void>) => {
       const userId = userIdRef.current;
@@ -284,6 +289,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           if (!userId) return;
           await upsertProfile(userId, profile);
         });
+        void trackEvent("profile_saved", {
+          goal: profile.goal,
+          days_per_week: profile.daysPerWeek,
+        });
       },
       async setPlan(plan: GeneratedPlan) {
         dispatch({ type: "SET_PLAN", payload: plan });
@@ -291,6 +300,12 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           const userId = userIdRef.current;
           if (!userId) return;
           await upsertPlan(userId, plan);
+        });
+        void trackEvent("plan_saved", {
+          subscription_tier: plan.subscriptionTier,
+          workouts_per_week: plan.training.schedule.filter((entry) =>
+            Boolean(entry.sessionId),
+          ).length,
         });
       },
       async resetPlan() {
@@ -312,6 +327,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
             );
           }
         }
+        void trackEvent("plan_reset");
       },
       async toggleWorkoutCompletion(date: string, workoutId: string) {
         const log = ensureLog(state.logs, date);
@@ -328,6 +344,11 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           const userId = userIdRef.current;
           if (!userId) return;
           await upsertDailyLog(userId, nextLog);
+        });
+        void trackEvent("workout_toggle", {
+          date,
+          workout_id: workoutId,
+          completed: !exists,
         });
       },
       async toggleMealCompletion(date: string, mealId: string) {
@@ -346,6 +367,11 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           if (!userId) return;
           await upsertDailyLog(userId, nextLog);
         });
+        void trackEvent("meal_toggle", {
+          date,
+          meal_id: mealId,
+          completed: !exists,
+        });
       },
       async toggleHabitCompletion(date: string, habitId: string) {
         const log = ensureLog(state.logs, date);
@@ -363,6 +389,11 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           if (!userId) return;
           await upsertDailyLog(userId, nextLog);
         });
+        void trackEvent("habit_toggle", {
+          date,
+          habit_id: habitId,
+          completed: !exists,
+        });
       },
       async setDailyEnergy(date: string, level: StressLevel) {
         const log = ensureLog(state.logs, date);
@@ -375,6 +406,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           const userId = userIdRef.current;
           if (!userId) return;
           await upsertDailyLog(userId, nextLog);
+        });
+        void trackEvent("energy_logged", {
+          date,
+          level,
         });
       },
       async markOnboardingComplete() {
@@ -389,6 +424,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
             );
           }
         }
+        void trackEvent("onboarding_completed");
       },
       async signOut() {
         await supabase.auth.signOut();
@@ -407,6 +443,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           }
         }
         onboardingKeyRef.current = null;
+        void trackEvent("user_signed_out");
       },
     }),
     [state.logs, withSync],

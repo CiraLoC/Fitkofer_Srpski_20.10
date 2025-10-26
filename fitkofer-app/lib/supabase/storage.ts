@@ -13,7 +13,7 @@ type PlanRow = {
 
 type LogRow = {
   user_id: string;
-  date: string;
+  log_date: string;
   log: DailyLog | null;
 };
 
@@ -91,7 +91,7 @@ export async function deleteProfile(userId: string) {
 export async function fetchLogs(userId: string) {
   const { data, error } = await supabase
     .from("daily_logs")
-    .select("date, log")
+    .select("log_date, log")
     .eq("user_id", userId);
 
   if (error) throw error;
@@ -99,7 +99,8 @@ export async function fetchLogs(userId: string) {
   return (
     rows.reduce<Record<string, DailyLog>>((acc, row) => {
       if (row.log) {
-        acc[row.date] = row.log;
+        const logDate = row.log.date ?? row.log_date;
+        acc[logDate] = { ...row.log, date: logDate };
       }
       return acc;
     }, {}) ?? {}
@@ -110,11 +111,11 @@ export async function upsertDailyLog(userId: string, log: DailyLog) {
   const { error } = await supabase.from("daily_logs").upsert(
     {
       user_id: userId,
-      date: log.date,
+      log_date: log.date,
       log,
     },
     {
-      onConflict: "user_id,date",
+      onConflict: "user_id,log_date",
     },
   );
   if (error) throw error;
