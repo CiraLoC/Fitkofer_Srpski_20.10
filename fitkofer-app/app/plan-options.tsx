@@ -1,12 +1,20 @@
-import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { useRouter, type Href } from 'expo-router';
+import { useCallback, useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { useRouter, type Href } from "expo-router";
 
-import Colors from '@/constants/Colors';
-import { useAppState } from '@/state/AppStateContext';
-import type { PlanSubscriptionTier } from '@/types';
+import Colors from "@/constants/Colors";
+import { useAppState } from "@/state/AppStateContext";
+import type { PlanSubscriptionTier } from "@/types";
 
-type OptionId = Exclude<PlanSubscriptionTier, 'unselected'>;
+type OptionId = Exclude<PlanSubscriptionTier, "unselected">;
 type PlanOption = {
   id: OptionId;
   title: string;
@@ -15,40 +23,41 @@ type PlanOption = {
 
 const options: PlanOption[] = [
   {
-    id: 'nutrition',
-    title: 'Generisi plan ishrane',
-    subtitle: 'Personalizovana sedmicna rotacija obroka i lista za kupovinu.',
+    id: "nutrition",
+    title: "Generisi plan ishrane",
+    subtitle: "Personalizovana sedmicna rotacija obroka i lista za kupovinu.",
   },
   {
-    id: 'training',
-    title: 'Generisi plan treninga',
-    subtitle: 'Pametno rasporedjeni treninzi sa tvojom dostupnom opremom.',
+    id: "training",
+    title: "Generisi plan treninga",
+    subtitle: "Pametno rasporedjeni treninzi sa tvojom dostupnom opremom.",
   },
   {
-    id: 'habits',
-    title: 'Generisi plan uvodjenja zdravih navika',
-    subtitle: 'Dnevni i nedeljni izazovi koji grade doslednost.',
+    id: "habits",
+    title: "Generisi plan uvodjenja zdravih navika",
+    subtitle: "Dnevni i nedeljni izazovi koji grade doslednost.",
   },
   {
-    id: 'full',
-    title: 'Generisi ceo paket',
-    subtitle: 'Ishrana + trening + navike u jednoj kontrolnoj tabli.',
+    id: "full",
+    title: "Generisi ceo paket",
+    subtitle: "Ishrana + trening + navike u jednoj kontrolnoj tabli.",
   },
 ];
 
 export default function PlanOptionsScreen() {
   const router = useRouter();
-  const { plan, session, isHydrated, setPlan, markOnboardingComplete } = useAppState();
+  const { plan, session, isHydrated, setPlan, markOnboardingComplete } =
+    useAppState();
   const [pendingOption, setPendingOption] = useState<OptionId | null>(null);
-  const dashboardHref = '/(tabs)/dashboard' satisfies Href;
+  const dashboardHref = "/(tabs)/dashboard" satisfies Href;
 
   useEffect(() => {
     if (!isHydrated) return;
     if (!session) {
-      router.replace('/auth');
+      router.replace("/auth");
       return;
     }
-    if (plan && plan.subscriptionTier !== 'unselected') {
+    if (plan && plan.subscriptionTier !== "unselected") {
       router.replace(dashboardHref);
     }
   }, [dashboardHref, isHydrated, plan, router, session]);
@@ -56,7 +65,7 @@ export default function PlanOptionsScreen() {
   const handleSelect = useCallback(
     async (option: OptionId) => {
       if (!plan) {
-        router.replace('/onboarding');
+        router.replace("/onboarding");
         return;
       }
       try {
@@ -65,8 +74,11 @@ export default function PlanOptionsScreen() {
         await markOnboardingComplete();
         router.replace(dashboardHref);
       } catch (error) {
-        console.error('[PlanOptions] Failed to store selection', error);
-        Alert.alert('Greska', 'Nismo uspeli da zapamtimo izbor. Pokusaj ponovo.');
+        console.error("[PlanOptions] Failed to store selection", error);
+        Alert.alert(
+          "Greska",
+          "Nismo uspeli da zapamtimo izbor. Pokusaj ponovo.",
+        );
       } finally {
         setPendingOption(null);
       }
@@ -82,14 +94,15 @@ export default function PlanOptionsScreen() {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.heading}>Dobrodosla!</Text>
       <Text style={styles.subheading}>
-        Izaberi kako zelis da nastavis i preuzmi kontrolu nad zdravljem uz personalizovane planove.
+        Izaberi kako zelis da nastavis i preuzmi kontrolu nad zdravljem uz
+        personalizovane planove.
       </Text>
 
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Sta zelis da personalizujes?</Text>
         <Text style={styles.cardCopy}>
-          Svaki plan mozes aktivirati zasebno ili uzeti komplet. U sledecem koraku pokazacemo pogodnosti i opcije
-          pretplate.
+          Svaki plan mozes aktivirati zasebno ili uzeti komplet. U sledecem
+          koraku pokazacemo pogodnosti i opcije pretplate.
         </Text>
       </View>
 
@@ -103,7 +116,9 @@ export default function PlanOptionsScreen() {
           >
             <Text style={styles.optionTitle}>{option.title}</Text>
             <Text style={styles.optionSubtitle}>{option.subtitle}</Text>
-            {pendingOption === option.id ? <ActivityIndicator color={Colors.light.tint} /> : null}
+            {pendingOption === option.id ? (
+              <ActivityIndicator color={Colors.light.tint} />
+            ) : null}
           </TouchableOpacity>
         ))}
       </View>
@@ -122,13 +137,13 @@ const styles = StyleSheet.create({
     gap: 24,
   },
   heading: {
-    fontFamily: 'PlayfairDisplay_700Bold',
+    fontFamily: "PlayfairDisplay_700Bold",
     fontSize: 30,
     color: Colors.light.text,
   },
   subheading: {
-    fontFamily: 'Inter_400Regular',
-    color: '#5C5C5C',
+    fontFamily: "Inter_400Regular",
+    color: "#5C5C5C",
     lineHeight: 22,
   },
   card: {
@@ -140,13 +155,13 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   cardTitle: {
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: "Inter_600SemiBold",
     fontSize: 18,
     color: Colors.light.text,
   },
   cardCopy: {
-    fontFamily: 'Inter_400Regular',
-    color: '#5C5C5C',
+    fontFamily: "Inter_400Regular",
+    color: "#5C5C5C",
     lineHeight: 20,
   },
   optionList: {
@@ -161,13 +176,13 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   optionTitle: {
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: "Inter_600SemiBold",
     fontSize: 18,
     color: Colors.light.text,
   },
   optionSubtitle: {
-    fontFamily: 'Inter_400Regular',
-    color: '#6B5E58',
+    fontFamily: "Inter_400Regular",
+    color: "#6B5E58",
     lineHeight: 20,
   },
 });

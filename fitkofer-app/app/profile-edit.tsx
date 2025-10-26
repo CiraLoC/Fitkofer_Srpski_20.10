@@ -1,34 +1,52 @@
-﻿import { useEffect, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useEffect, useState } from "react";
+import {
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { useRouter } from "expo-router";
 
-import Colors from '@/constants/Colors';
-import { useAppState } from '@/state/AppStateContext';
-import type { StressLevel } from '@/types';
+import Colors from "@/constants/Colors";
+import { useAppState } from "@/state/AppStateContext";
+import type { StressLevel } from "@/types";
 
 const stressOptions: { label: string; value: StressLevel }[] = [
-  { label: 'Nizak', value: 1 },
-  { label: 'Blago povisen', value: 2 },
-  { label: 'Umeren', value: 3 },
-  { label: 'Visok', value: 4 },
-  { label: 'Hronican', value: 5 },
+  { label: "Nizak", value: 1 },
+  { label: "Blago povisen", value: 2 },
+  { label: "Umeren", value: 3 },
+  { label: "Visok", value: 4 },
+  { label: "Hronican", value: 5 },
 ];
 
 export default function ProfileEditScreen() {
   const router = useRouter();
   const { profile, setProfile, session, isHydrated } = useAppState();
-  const [weight, setWeight] = useState(profile?.weightKg ? String(profile.weightKg) : '');
-  const [sleep, setSleep] = useState(profile?.sleepHours ? String(profile.sleepHours) : '');
-  const [stress, setStress] = useState<StressLevel>((profile?.stressLevel ?? 3) as StressLevel);
-  const [cycleLength, setCycleLength] = useState(profile?.cycleLengthDays ? String(profile.cycleLengthDays) : '');
-  const [periodLength, setPeriodLength] = useState(profile?.periodLengthDays ? String(profile.periodLengthDays) : '');
-  const [lastPeriod, setLastPeriod] = useState(profile?.lastPeriodDate ?? '');
+  const [weight, setWeight] = useState(
+    profile?.weightKg ? String(profile.weightKg) : "",
+  );
+  const [sleep, setSleep] = useState(
+    profile?.sleepHours ? String(profile.sleepHours) : "",
+  );
+  const [stress, setStress] = useState<StressLevel>(
+    (profile?.stressLevel ?? 3) as StressLevel,
+  );
+  const [cycleLength, setCycleLength] = useState(
+    profile?.cycleLengthDays ? String(profile.cycleLengthDays) : "",
+  );
+  const [periodLength, setPeriodLength] = useState(
+    profile?.periodLengthDays ? String(profile.periodLengthDays) : "",
+  );
+  const [lastPeriod, setLastPeriod] = useState(profile?.lastPeriodDate ?? "");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (isHydrated && !session) {
-      router.replace('/auth');
+      router.replace("/auth");
     }
   }, [isHydrated, router, session]);
 
@@ -38,32 +56,48 @@ export default function ProfileEditScreen() {
 
   const handleSave = async () => {
     setError(null);
-    const nextWeight = weight.trim() ? Number(weight.replace(/[^0-9.]/g, '')) : profile.weightKg;
-    const nextSleep = sleep.trim() ? Number(sleep.replace(/[^0-9.]/g, '')) : profile.sleepHours;
+    const nextWeight = weight.trim()
+      ? Number(weight.replace(/[^0-9.]/g, ""))
+      : profile.weightKg;
+    const nextSleep = sleep.trim()
+      ? Number(sleep.replace(/[^0-9.]/g, ""))
+      : profile.sleepHours;
 
     if (Number.isNaN(nextWeight) || nextWeight <= 0) {
-      setError('Unesi validnu težinu.');
+      setError("Unesi validnu težinu.");
       return;
     }
     if (Number.isNaN(nextSleep) || nextSleep <= 0 || nextSleep > 24) {
-      setError('Unesi validan broj sati sna.');
+      setError("Unesi validan broj sati sna.");
       return;
     }
 
-    const cycleLengthDays = cycleLength.trim() ? Number(cycleLength.replace(/[^0-9]/g, '')) : null;
-    const periodLengthDays = periodLength.trim() ? Number(periodLength.replace(/[^0-9]/g, '')) : null;
+    const cycleLengthDays = cycleLength.trim()
+      ? Number(cycleLength.replace(/[^0-9]/g, ""))
+      : null;
+    const periodLengthDays = periodLength.trim()
+      ? Number(periodLength.replace(/[^0-9]/g, ""))
+      : null;
     const lastPeriodDate = lastPeriod.trim() ? lastPeriod.trim() : null;
 
-    if (cycleLengthDays !== null && (cycleLengthDays < 15 || cycleLengthDays > 60)) {
-      setError('Dužina ciklusa treba da bude između 15 i 60 dana.');
+    if (
+      cycleLengthDays !== null &&
+      (cycleLengthDays < 15 || cycleLengthDays > 60)
+    ) {
+      setError("Dužina ciklusa treba da bude između 15 i 60 dana.");
       return;
     }
-    if (periodLengthDays !== null && (periodLengthDays < 1 || periodLengthDays > 15)) {
-      setError('Trajanje menstruacije treba da bude između 1 i 15 dana.');
+    if (
+      periodLengthDays !== null &&
+      (periodLengthDays < 1 || periodLengthDays > 15)
+    ) {
+      setError("Trajanje menstruacije treba da bude između 1 i 15 dana.");
       return;
     }
     if (lastPeriodDate && !/^\d{4}-\d{2}-\d{2}$/.test(lastPeriodDate)) {
-      setError('Unesi datum poslednje menstruacije u formatu YYYY-MM-DD ili ostavi prazno.');
+      setError(
+        "Unesi datum poslednje menstruacije u formatu YYYY-MM-DD ili ostavi prazno.",
+      );
       return;
     }
 
@@ -78,11 +112,11 @@ export default function ProfileEditScreen() {
         periodLengthDays,
         lastPeriodDate,
       });
-      Alert.alert('Sačuvano', 'Profil je uspešno ažuriran.');
+      Alert.alert("Sačuvano", "Profil je uspešno ažuriran.");
       router.back();
     } catch (err) {
-      console.error('[ProfileEdit] Failed to update profile', err);
-      setError('Došlo je do greške pri čuvanju profila. Pokušaj ponovo.');
+      console.error("[ProfileEdit] Failed to update profile", err);
+      setError("Došlo je do greške pri čuvanju profila. Pokušaj ponovo.");
     } finally {
       setSaving(false);
     }
@@ -91,7 +125,9 @@ export default function ProfileEditScreen() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.heading}>Uredi profil</Text>
-      <Text style={styles.copy}>Ažuriraj osnovne podatke kako bismo bolje prilagodili tvoj plan.</Text>
+      <Text style={styles.copy}>
+        Ažuriraj osnovne podatke kako bismo bolje prilagodili tvoj plan.
+      </Text>
 
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Težina i san</Text>
@@ -125,10 +161,18 @@ export default function ProfileEditScreen() {
           {stressOptions.map((option) => (
             <TouchableOpacity
               key={option.value}
-              style={[styles.pill, stress === option.value && styles.pillSelected]}
+              style={[
+                styles.pill,
+                stress === option.value && styles.pillSelected,
+              ]}
               onPress={() => setStress(option.value)}
             >
-              <Text style={[styles.pillLabel, stress === option.value && styles.pillLabelSelected]}>
+              <Text
+                style={[
+                  styles.pillLabel,
+                  stress === option.value && styles.pillLabelSelected,
+                ]}
+              >
                 {option.label}
               </Text>
             </TouchableOpacity>
@@ -176,7 +220,9 @@ export default function ProfileEditScreen() {
         onPress={handleSave}
         disabled={saving}
       >
-        <Text style={styles.primaryLabel}>{saving ? 'Čuvanje...' : 'Sačuvaj promene'}</Text>
+        <Text style={styles.primaryLabel}>
+          {saving ? "Čuvanje..." : "Sačuvaj promene"}
+        </Text>
       </TouchableOpacity>
     </ScrollView>
   );
@@ -193,13 +239,13 @@ const styles = StyleSheet.create({
     paddingBottom: 48,
   },
   heading: {
-    fontFamily: 'PlayfairDisplay_700Bold',
+    fontFamily: "PlayfairDisplay_700Bold",
     fontSize: 26,
     color: Colors.light.text,
   },
   copy: {
-    fontFamily: 'Inter_400Regular',
-    color: '#5C5C5C',
+    fontFamily: "Inter_400Regular",
+    color: "#5C5C5C",
   },
   card: {
     backgroundColor: Colors.light.card,
@@ -210,20 +256,20 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   cardTitle: {
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: "Inter_600SemiBold",
     fontSize: 18,
     color: Colors.light.text,
   },
   row: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 12,
   },
   inputGroup: {
     flex: 1,
   },
   label: {
-    fontFamily: 'Inter_500Medium',
-    color: '#6B5E58',
+    fontFamily: "Inter_500Medium",
+    color: "#6B5E58",
   },
   input: {
     marginTop: 6,
@@ -233,12 +279,12 @@ const styles = StyleSheet.create({
     borderColor: Colors.light.border,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    fontFamily: 'Inter_500Medium',
+    fontFamily: "Inter_500Medium",
     color: Colors.light.text,
   },
   pillRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 12,
   },
   pill: {
@@ -254,25 +300,25 @@ const styles = StyleSheet.create({
     borderColor: Colors.light.tint,
   },
   pillLabel: {
-    fontFamily: 'Inter_500Medium',
+    fontFamily: "Inter_500Medium",
     color: Colors.light.text,
   },
   pillLabelSelected: {
     color: Colors.light.background,
   },
   error: {
-    fontFamily: 'Inter_500Medium',
-    color: '#AF1F1F',
+    fontFamily: "Inter_500Medium",
+    color: "#AF1F1F",
   },
   primaryButton: {
     marginTop: 12,
     backgroundColor: Colors.light.tint,
     borderRadius: 16,
     paddingVertical: 16,
-    alignItems: 'center',
+    alignItems: "center",
   },
   primaryLabel: {
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: "Inter_600SemiBold",
     color: Colors.light.background,
     fontSize: 16,
   },

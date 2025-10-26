@@ -1,5 +1,5 @@
-import { supabase } from '@/lib/supabase/client';
-import type { DailyLog, GeneratedPlan, UserProfile } from '@/types';
+import { supabase } from "@/lib/supabase/client";
+import type { DailyLog, GeneratedPlan, UserProfile } from "@/types";
 
 type ProfileRow = {
   user_id: string;
@@ -19,9 +19,9 @@ type LogRow = {
 
 export async function fetchProfile(userId: string) {
   const { data, error } = await supabase
-    .from('user_profiles')
-    .select('profile')
-    .eq('user_id', userId)
+    .from("user_profiles")
+    .select("profile")
+    .eq("user_id", userId)
     .maybeSingle();
 
   if (error) throw error;
@@ -30,13 +30,13 @@ export async function fetchProfile(userId: string) {
 }
 
 export async function upsertProfile(userId: string, profile: UserProfile) {
-  const { error } = await supabase.from('user_profiles').upsert(
+  const { error } = await supabase.from("user_profiles").upsert(
     {
       user_id: userId,
       profile,
     },
     {
-      onConflict: 'user_id',
+      onConflict: "user_id",
     },
   );
   if (error) throw error;
@@ -44,9 +44,9 @@ export async function upsertProfile(userId: string, profile: UserProfile) {
 
 export async function fetchPlan(userId: string) {
   const { data, error } = await supabase
-    .from('user_plans')
-    .select('plan')
-    .eq('user_id', userId)
+    .from("user_plans")
+    .select("plan")
+    .eq("user_id", userId)
     .maybeSingle();
 
   if (error) throw error;
@@ -55,35 +55,44 @@ export async function fetchPlan(userId: string) {
 }
 
 export async function upsertPlan(userId: string, plan: GeneratedPlan) {
-  const { error } = await supabase.from('user_plans').upsert(
+  const { error } = await supabase.from("user_plans").upsert(
     {
       user_id: userId,
       plan,
     },
     {
-      onConflict: 'user_id',
+      onConflict: "user_id",
     },
   );
   if (error) throw error;
 }
 
 export async function deletePlan(userId: string) {
-  const { error } = await supabase.from('user_plans').delete().eq('user_id', userId);
+  const { error } = await supabase
+    .from("user_plans")
+    .delete()
+    .eq("user_id", userId);
   if (error) throw error;
-  const { error: logsError } = await supabase.from('daily_logs').delete().eq('user_id', userId);
+  const { error: logsError } = await supabase
+    .from("daily_logs")
+    .delete()
+    .eq("user_id", userId);
   if (logsError) throw logsError;
 }
 
 export async function deleteProfile(userId: string) {
-  const { error } = await supabase.from('user_profiles').delete().eq('user_id', userId);
+  const { error } = await supabase
+    .from("user_profiles")
+    .delete()
+    .eq("user_id", userId);
   if (error) throw error;
 }
 
 export async function fetchLogs(userId: string) {
   const { data, error } = await supabase
-    .from('daily_logs')
-    .select('date, log')
-    .eq('user_id', userId);
+    .from("daily_logs")
+    .select("date, log")
+    .eq("user_id", userId);
 
   if (error) throw error;
   const rows = (data as LogRow[]) ?? [];
@@ -98,14 +107,14 @@ export async function fetchLogs(userId: string) {
 }
 
 export async function upsertDailyLog(userId: string, log: DailyLog) {
-  const { error } = await supabase.from('daily_logs').upsert(
+  const { error } = await supabase.from("daily_logs").upsert(
     {
       user_id: userId,
       date: log.date,
       log,
     },
     {
-      onConflict: 'user_id,date',
+      onConflict: "user_id,date",
     },
   );
   if (error) throw error;

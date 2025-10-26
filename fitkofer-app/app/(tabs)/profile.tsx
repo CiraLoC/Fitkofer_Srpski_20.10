@@ -1,35 +1,42 @@
-﻿import { useEffect, useMemo } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useEffect, useMemo } from "react";
+import {
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { useRouter } from "expo-router";
 
-import Colors from '@/constants/Colors';
-import { useAppState } from '@/state/AppStateContext';
+import Colors from "@/constants/Colors";
+import { useAppState } from "@/state/AppStateContext";
 
 function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString('sr-RS', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
+  return new Date(iso).toLocaleDateString("sr-RS", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
   });
 }
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { profile, plan, resetPlan, signOut, session, isHydrated } = useAppState();
+  const { profile, plan, resetPlan, signOut, session, isHydrated } =
+    useAppState();
   const recentSnapshots = useMemo(
     () => (plan ? plan.profileHistory.slice(-5).reverse() : []),
-    [plan?.profileHistory],
+    [plan],
   );
   const goalLabel = useMemo(() => {
-    if (!profile) return '';
-    if (profile.goal === 'lose') return 'Gubitak masnog tkiva';
-    if (profile.goal === 'gain') return 'Dobitak misica';
-    return 'Odrzavanje';
+    if (!profile) return "";
+    if (profile.goal === "lose") return "Gubitak masnog tkiva";
+    if (profile.goal === "gain") return "Dobitak misica";
+    return "Odrzavanje";
   }, [profile]);
 
   useEffect(() => {
     if (isHydrated && !session) {
-      router.replace('/auth');
+      router.replace("/auth");
     }
   }, [isHydrated, router, session]);
 
@@ -40,8 +47,13 @@ export default function ProfileScreen() {
   if (!profile || !plan) {
     return (
       <View style={styles.centered}>
-        <Text style={styles.emptyText}>Još nema podataka. Završi onboarding da pokreneš plan.</Text>
-        <TouchableOpacity style={styles.primaryButton} onPress={() => router.replace('/onboarding')}>
+        <Text style={styles.emptyText}>
+          Još nema podataka. Završi onboarding da pokreneš plan.
+        </Text>
+        <TouchableOpacity
+          style={styles.primaryButton}
+          onPress={() => router.replace("/onboarding")}
+        >
           <Text style={styles.primaryLabel}>Pokreni onboarding</Text>
         </TouchableOpacity>
       </View>
@@ -50,18 +62,22 @@ export default function ProfileScreen() {
 
   const handleRegenerate = () => {
     resetPlan();
-    router.replace('/onboarding');
+    router.replace("/onboarding");
   };
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.heading}>Tvoj profil</Text>
       <Text style={styles.copy}>
-        Podaci su sačuvani u Supabase profilu. Možeš ih menjati ručno ili ponoviti onboarding u bilo kom trenutku.
+        Podaci su sačuvani u Supabase profilu. Možeš ih menjati ručno ili
+        ponoviti onboarding u bilo kom trenutku.
       </Text>
 
       <View style={styles.buttonRow}>
-        <TouchableOpacity style={styles.secondaryButton} onPress={() => router.push('/profile-edit')}>
+        <TouchableOpacity
+          style={styles.secondaryButton}
+          onPress={() => router.push("/profile-edit")}
+        >
           <Text style={styles.secondaryLabel}>Uredi profil</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.secondaryButton} onPress={signOut}>
@@ -99,43 +115,71 @@ export default function ProfileScreen() {
 
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Menstrualni ciklus</Text>
-        <Text style={styles.copy}>Informacije pomažu pri prilagođavanju treninga i kalorija.</Text>
+        <Text style={styles.copy}>
+          Informacije pomažu pri prilagođavanju treninga i kalorija.
+        </Text>
         <View style={styles.row}>
           <Text style={styles.label}>Dužina ciklusa</Text>
-          <Text style={styles.value}>{profile.cycleLengthDays ? `${profile.cycleLengthDays} dana` : 'Nije uneto'}</Text>
+          <Text style={styles.value}>
+            {profile.cycleLengthDays
+              ? `${profile.cycleLengthDays} dana`
+              : "Nije uneto"}
+          </Text>
         </View>
         <View style={styles.row}>
           <Text style={styles.label}>Trajanje menstruacije</Text>
-          <Text style={styles.value}>{profile.periodLengthDays ? `${profile.periodLengthDays} dana` : 'Nije uneto'}</Text>
+          <Text style={styles.value}>
+            {profile.periodLengthDays
+              ? `${profile.periodLengthDays} dana`
+              : "Nije uneto"}
+          </Text>
         </View>
         <View style={styles.row}>
           <Text style={styles.label}>Poslednja menstruacija</Text>
-          <Text style={styles.value}>{profile.lastPeriodDate ? formatDate(profile.lastPeriodDate) : 'Nije uneto'}</Text>
+          <Text style={styles.value}>
+            {profile.lastPeriodDate
+              ? formatDate(profile.lastPeriodDate)
+              : "Nije uneto"}
+          </Text>
         </View>
       </View>
 
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Zdravstveni kontekst</Text>
-        <Text style={styles.copy}>Plan je prilagođen navedenim stanjima i ograničenjima.</Text>
-        <Text style={styles.value}>
-          {profile.healthConditions.length > 0 ? profile.healthConditions.join(', ') : 'Nema specifičnih stanja'}
+        <Text style={styles.copy}>
+          Plan je prilagođen navedenim stanjima i ograničenjima.
         </Text>
-        <Text style={styles.copy}>Alergije: {profile.allergies.join(', ') || 'Nema'}</Text>
-        <Text style={styles.copy}>Ne volim: {profile.dislikedFoods.join(', ') || 'Nema'}</Text>
+        <Text style={styles.value}>
+          {profile.healthConditions.length > 0
+            ? profile.healthConditions.join(", ")
+            : "Nema specifičnih stanja"}
+        </Text>
+        <Text style={styles.copy}>
+          Alergije: {profile.allergies.join(", ") || "Nema"}
+        </Text>
+        <Text style={styles.copy}>
+          Ne volim: {profile.dislikedFoods.join(", ") || "Nema"}
+        </Text>
       </View>
 
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Integracije</Text>
         <View style={styles.integrationRow}>
           <Text style={styles.integrationTitle}>Apple Health / Google Fit</Text>
-          <Text style={styles.integrationStatus}>Read-only (koraci, energija)</Text>
+          <Text style={styles.integrationStatus}>
+            Read-only (koraci, energija)
+          </Text>
         </View>
-        <Text style={styles.copy}>Automatska sinhronizacija stiže kroz Supabase Edge funkciju.</Text>
+        <Text style={styles.copy}>
+          Automatska sinhronizacija stiže kroz Supabase Edge funkciju.
+        </Text>
       </View>
 
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Pretplata</Text>
-        <Text style={styles.copy}>Fitkofer Pro (7 dana probno) – upravljanje kroz RevenueCat dashboard.</Text>
+        <Text style={styles.copy}>
+          Fitkofer Pro (7 dana probno) – upravljanje kroz RevenueCat dashboard.
+        </Text>
         <Text style={styles.copy}>Status: Aktivna (primer)</Text>
         <TouchableOpacity style={styles.secondaryButton}>
           <Text style={styles.secondaryLabel}>Kontakt podršku za promene</Text>
@@ -145,13 +189,18 @@ export default function ProfileScreen() {
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Istorija promena profila</Text>
         {recentSnapshots.length === 0 ? (
-          <Text style={styles.copy}>Još uvek nema sačuvanih istorijskih zapisa.</Text>
+          <Text style={styles.copy}>
+            Još uvek nema sačuvanih istorijskih zapisa.
+          </Text>
         ) : (
           recentSnapshots.map((snapshot) => (
             <View key={snapshot.capturedAt} style={styles.historyItem}>
-              <Text style={styles.historyDate}>{formatDate(snapshot.capturedAt)}</Text>
+              <Text style={styles.historyDate}>
+                {formatDate(snapshot.capturedAt)}
+              </Text>
               <Text style={styles.historyDetail}>
-                {snapshot.profile.weightKg} kg · {snapshot.profile.daysPerWeek}x treninga · cilj {snapshot.profile.goal}
+                {snapshot.profile.weightKg} kg · {snapshot.profile.daysPerWeek}x
+                treninga · cilj {snapshot.profile.goal}
               </Text>
             </View>
           ))
@@ -177,25 +226,25 @@ const styles = StyleSheet.create({
   },
   centered: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     padding: 24,
     backgroundColor: Colors.light.background,
     gap: 16,
   },
   emptyText: {
-    fontFamily: 'Inter_500Medium',
+    fontFamily: "Inter_500Medium",
     color: Colors.light.text,
-    textAlign: 'center',
+    textAlign: "center",
   },
   heading: {
-    fontFamily: 'PlayfairDisplay_700Bold',
+    fontFamily: "PlayfairDisplay_700Bold",
     fontSize: 26,
     color: Colors.light.text,
   },
   copy: {
-    fontFamily: 'Inter_400Regular',
-    color: '#5C5C5C',
+    fontFamily: "Inter_400Regular",
+    color: "#5C5C5C",
     lineHeight: 20,
   },
   card: {
@@ -207,20 +256,20 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   cardTitle: {
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: "Inter_600SemiBold",
     fontSize: 18,
     color: Colors.light.text,
   },
   row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
   },
   label: {
-    fontFamily: 'Inter_400Regular',
-    color: '#6B5E58',
+    fontFamily: "Inter_400Regular",
+    color: "#6B5E58",
   },
   value: {
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: "Inter_600SemiBold",
     color: Colors.light.text,
   },
   integrationRow: {
@@ -232,21 +281,21 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   integrationTitle: {
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: "Inter_600SemiBold",
     color: Colors.light.text,
   },
   integrationStatus: {
-    fontFamily: 'Inter_400Regular',
-    color: '#6B5E58',
+    fontFamily: "Inter_400Regular",
+    color: "#6B5E58",
   },
   primaryButton: {
     backgroundColor: Colors.light.tint,
     borderRadius: 16,
     paddingVertical: 16,
-    alignItems: 'center',
+    alignItems: "center",
   },
   primaryLabel: {
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: "Inter_600SemiBold",
     color: Colors.light.background,
     fontSize: 16,
   },
@@ -259,11 +308,11 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.light.background,
   },
   secondaryLabel: {
-    fontFamily: 'Inter_500Medium',
+    fontFamily: "Inter_500Medium",
     color: Colors.light.text,
   },
   buttonRow: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 12,
   },
   historyItem: {
@@ -275,11 +324,11 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.light.background,
   },
   historyDate: {
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: "Inter_600SemiBold",
     color: Colors.light.text,
   },
   historyDetail: {
-    fontFamily: 'Inter_400Regular',
-    color: '#5C5C5C',
+    fontFamily: "Inter_400Regular",
+    color: "#5C5C5C",
   },
 });

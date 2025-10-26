@@ -1,20 +1,20 @@
-import { useCallback, useState } from 'react';
-import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { useRouter, type Href } from 'expo-router';
+import { useCallback, useState } from "react";
+import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useRouter, type Href } from "expo-router";
 
-import Colors from '@/constants/Colors';
-import { useAppState } from '@/state/AppStateContext';
+import Colors from "@/constants/Colors";
+import { useAppState } from "@/state/AppStateContext";
 
 export default function NutritionPlanScreen() {
   const router = useRouter();
   const { plan, setPlan, markOnboardingComplete } = useAppState();
   const [saving, setSaving] = useState(false);
-  const dashboardHref = '/(tabs)/dashboard' satisfies Href;
+  const dashboardHref = "/(tabs)/dashboard" satisfies Href;
 
   const activatePlan = useCallback(
-    async (tier: 'nutrition' | 'full') => {
+    async (tier: "nutrition" | "full") => {
       if (!plan) {
-        router.replace('/onboarding');
+        router.replace("/onboarding");
         return;
       }
       try {
@@ -23,8 +23,11 @@ export default function NutritionPlanScreen() {
         await markOnboardingComplete();
         router.replace(dashboardHref);
       } catch (error) {
-        console.error('[NutritionPlan] Failed to update subscription tier', error);
-        Alert.alert('Greska', 'Plan nije sacuvan. Pokusaj ponovo.');
+        console.error(
+          "[NutritionPlan] Failed to update subscription tier",
+          error,
+        );
+        Alert.alert("Greska", "Plan nije sacuvan. Pokusaj ponovo.");
       } finally {
         setSaving(false);
       }
@@ -36,14 +39,23 @@ export default function NutritionPlanScreen() {
     <View style={styles.container}>
       <Text style={styles.heading}>Plan ishrane spreman!</Text>
       <Text style={styles.copy}>
-        Pogledaj personalizovanu rotaciju obroka, makroe i listu za kupovinu za narednih 7 dana.
+        Pogledaj personalizovanu rotaciju obroka, makroe i listu za kupovinu za
+        narednih 7 dana.
       </Text>
 
-      <TouchableOpacity style={styles.primaryButton} onPress={() => activatePlan('nutrition')} disabled={saving}>
+      <TouchableOpacity
+        style={styles.primaryButton}
+        onPress={() => activatePlan("nutrition")}
+        disabled={saving}
+      >
         <Text style={styles.primaryLabel}>Otvori panel za ishranu</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.secondaryButton} onPress={() => activatePlan('full')} disabled={saving}>
+      <TouchableOpacity
+        style={styles.secondaryButton}
+        onPress={() => activatePlan("full")}
+        disabled={saving}
+      >
         <Text style={styles.secondaryLabel}>Ipak zelim ceo paket</Text>
       </TouchableOpacity>
     </View>
@@ -55,39 +67,39 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.light.background,
     padding: 24,
-    justifyContent: 'center',
+    justifyContent: "center",
     gap: 20,
   },
   heading: {
-    fontFamily: 'PlayfairDisplay_700Bold',
+    fontFamily: "PlayfairDisplay_700Bold",
     fontSize: 28,
     color: Colors.light.text,
   },
   copy: {
-    fontFamily: 'Inter_400Regular',
-    color: '#5C5C5C',
+    fontFamily: "Inter_400Regular",
+    color: "#5C5C5C",
     lineHeight: 22,
   },
   primaryButton: {
     backgroundColor: Colors.light.tint,
     paddingVertical: 16,
     borderRadius: 16,
-    alignItems: 'center',
+    alignItems: "center",
   },
   primaryLabel: {
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: "Inter_600SemiBold",
     color: Colors.light.background,
     fontSize: 16,
   },
   secondaryButton: {
     borderRadius: 16,
     paddingVertical: 16,
-    alignItems: 'center',
+    alignItems: "center",
     borderWidth: 1,
     borderColor: Colors.light.border,
   },
   secondaryLabel: {
-    fontFamily: 'Inter_500Medium',
+    fontFamily: "Inter_500Medium",
     color: Colors.light.text,
   },
 });

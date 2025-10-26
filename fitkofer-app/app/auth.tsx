@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -8,46 +8,49 @@ import {
   Text,
   TextInput,
   View,
-} from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+} from "react-native";
+import { useLocalSearchParams, useRouter } from "expo-router";
 
-import Colors from '@/constants/Colors';
-import { supabase } from '@/lib/supabase/client';
-import { useAppState } from '@/state/AppStateContext';
+import Colors from "@/constants/Colors";
+import { supabase } from "@/lib/supabase/client";
+import { useAppState } from "@/state/AppStateContext";
 
-type AuthMode = 'signIn' | 'signUp';
+type AuthMode = "signIn" | "signUp";
 
 export default function AuthScreen() {
   const router = useRouter();
   const { session, isHydrated } = useAppState();
   const params = useLocalSearchParams<{ mode?: string }>();
-  const [mode, setMode] = useState<AuthMode>('signIn');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [mode, setMode] = useState<AuthMode>("signIn");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
 
   useEffect(() => {
-    if (params?.mode === 'signUp') {
-      setMode('signUp');
+    if (params?.mode === "signUp") {
+      setMode("signUp");
     }
   }, [params]);
 
   useEffect(() => {
     if (isHydrated && session) {
-      router.replace('/');
+      router.replace("/");
     }
   }, [isHydrated, router, session]);
 
   const disabled = !email || !password || loading;
   const buttonLabel = useMemo(
-    () => (mode === 'signIn' ? 'Prijavi se' : 'Registruj se'),
+    () => (mode === "signIn" ? "Prijavi se" : "Registruj se"),
     [mode],
   );
 
   const toggleLabel = useMemo(
-    () => (mode === 'signIn' ? 'Nemaš nalog? Registruj se' : 'Već imaš nalog? Prijavi se'),
+    () =>
+      mode === "signIn"
+        ? "Nemaš nalog? Registruj se"
+        : "Već imaš nalog? Prijavi se",
     [mode],
   );
 
@@ -57,7 +60,7 @@ export default function AuthScreen() {
     setError(null);
     setInfo(null);
     try {
-      if (mode === 'signIn') {
+      if (mode === "signIn") {
         const { error: signInError } = await supabase.auth.signInWithPassword({
           email,
           password,
@@ -74,18 +77,20 @@ export default function AuthScreen() {
           throw signUpError;
         }
         if (!data.session) {
-          setInfo('Proveri email za potvrdu naloga pre prijavljivanja.');
+          setInfo("Proveri email za potvrdu naloga pre prijavljivanja.");
         }
       }
     } catch (authError) {
-      setError(authError instanceof Error ? authError.message : String(authError));
+      setError(
+        authError instanceof Error ? authError.message : String(authError),
+      );
     } finally {
       setLoading(false);
     }
   };
 
   const handleToggleMode = () => {
-    setMode((prev) => (prev === 'signIn' ? 'signUp' : 'signIn'));
+    setMode((prev) => (prev === "signIn" ? "signUp" : "signIn"));
     setError(null);
     setInfo(null);
   };
@@ -93,14 +98,16 @@ export default function AuthScreen() {
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <View style={styles.card}>
-        <Text style={styles.title}>{mode === 'signIn' ? 'Dobrodošla nazad' : 'Kreiraj nalog'}</Text>
+        <Text style={styles.title}>
+          {mode === "signIn" ? "Dobrodošla nazad" : "Kreiraj nalog"}
+        </Text>
         <Text style={styles.subtitle}>
-          {mode === 'signIn'
-            ? 'Unesi email i lozinku za nastavak.'
-            : 'Registruj se da bi sačuvala svoj plan i napredak.'}
+          {mode === "signIn"
+            ? "Unesi email i lozinku za nastavak."
+            : "Registruj se da bi sačuvala svoj plan i napredak."}
         </Text>
 
         <View style={styles.field}>
@@ -141,7 +148,11 @@ export default function AuthScreen() {
             pressed ? styles.buttonPressed : undefined,
           ]}
         >
-          {loading ? <ActivityIndicator color={Colors.light.background} /> : <Text style={styles.primaryLabel}>{buttonLabel}</Text>}
+          {loading ? (
+            <ActivityIndicator color={Colors.light.background} />
+          ) : (
+            <Text style={styles.primaryLabel}>{buttonLabel}</Text>
+          )}
         </Pressable>
 
         <Pressable onPress={handleToggleMode}>
@@ -156,12 +167,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.light.background,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     padding: 24,
   },
   card: {
-    width: '100%',
+    width: "100%",
     maxWidth: 420,
     backgroundColor: Colors.light.card,
     padding: 28,
@@ -171,20 +182,20 @@ const styles = StyleSheet.create({
     gap: 18,
   },
   title: {
-    fontFamily: 'PlayfairDisplay_700Bold',
+    fontFamily: "PlayfairDisplay_700Bold",
     fontSize: 28,
     color: Colors.light.text,
   },
   subtitle: {
-    fontFamily: 'Inter_400Regular',
-    color: '#6B5E58',
+    fontFamily: "Inter_400Regular",
+    color: "#6B5E58",
     lineHeight: 20,
   },
   field: {
     gap: 8,
   },
   label: {
-    fontFamily: 'Inter_500Medium',
+    fontFamily: "Inter_500Medium",
     color: Colors.light.text,
   },
   input: {
@@ -193,24 +204,24 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    fontFamily: 'Inter_500Medium',
+    fontFamily: "Inter_500Medium",
     color: Colors.light.text,
     backgroundColor: Colors.light.background,
   },
   error: {
-    color: '#B12E38',
-    fontFamily: 'Inter_500Medium',
+    color: "#B12E38",
+    fontFamily: "Inter_500Medium",
   },
   info: {
     color: Colors.palette.olive,
-    fontFamily: 'Inter_500Medium',
+    fontFamily: "Inter_500Medium",
   },
   primaryButton: {
     marginTop: 8,
     backgroundColor: Colors.light.tint,
     paddingVertical: 14,
     borderRadius: 14,
-    alignItems: 'center',
+    alignItems: "center",
   },
   buttonDisabled: {
     opacity: 0.6,
@@ -220,13 +231,13 @@ const styles = StyleSheet.create({
   },
   primaryLabel: {
     color: Colors.light.background,
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: "Inter_600SemiBold",
     fontSize: 16,
   },
   toggle: {
     marginTop: 8,
-    textAlign: 'center',
-    fontFamily: 'Inter_500Medium',
+    textAlign: "center",
+    fontFamily: "Inter_500Medium",
     color: Colors.light.text,
   },
 });

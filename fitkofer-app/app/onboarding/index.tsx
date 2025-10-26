@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -8,71 +8,71 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-} from 'react-native';
-import { useRouter, type Href } from 'expo-router';
+} from "react-native";
+import { useRouter, type Href } from "expo-router";
 
-import Colors from '@/constants/Colors';
-import { generatePlan } from '@/lib/plan/generator';
-import { useAppState } from '@/state/AppStateContext';
+import Colors from "@/constants/Colors";
+import { generatePlan } from "@/lib/plan/generator";
+import { useAppState } from "@/state/AppStateContext";
 import type {
   ActivityLevel,
   Goal,
   HealthCondition,
   StressLevel,
   UserProfile,
-} from '@/types';
+} from "@/types";
 
-const steps = ['O tebi', 'Ciljevi', 'Ishrana', 'Logistika'] as const;
+const steps = ["O tebi", "Ciljevi", "Ishrana", "Logistika"] as const;
 
 type Step = (typeof steps)[number];
 
 const goals: { value: Goal; label: string }[] = [
-  { value: 'lose', label: 'Gubitak masnog tkiva' },
-  { value: 'maintain', label: 'Odrzavanje' },
-  { value: 'gain', label: 'Dobitak misica' },
+  { value: "lose", label: "Gubitak masnog tkiva" },
+  { value: "maintain", label: "Odrzavanje" },
+  { value: "gain", label: "Dobitak misica" },
 ];
 const activities: { value: ActivityLevel; label: string }[] = [
-  { value: 'sedentary', label: 'Sedeći posao' },
-  { value: 'light', label: 'Lagano aktivna' },
-  { value: 'moderate', label: 'Trening 3-4x' },
-  { value: 'high', label: 'Intenzivno 5x+' },
+  { value: "sedentary", label: "Sedeći posao" },
+  { value: "light", label: "Lagano aktivna" },
+  { value: "moderate", label: "Trening 3-4x" },
+  { value: "high", label: "Intenzivno 5x+" },
 ];
 
 const conditions: { value: HealthCondition; label: string }[] = [
-  { value: 'IR', label: 'Insulinska rezistencija' },
-  { value: 'Hashimoto', label: 'Hashimoto' },
-  { value: 'PCOS', label: 'PCOS' },
+  { value: "IR", label: "Insulinska rezistencija" },
+  { value: "Hashimoto", label: "Hashimoto" },
+  { value: "PCOS", label: "PCOS" },
 ];
 
 const stressOptions: { value: StressLevel; label: string }[] = [
-  { value: 1, label: 'Nizak' },
-  { value: 2, label: 'Blago podignut' },
-  { value: 3, label: 'Umeren' },
-  { value: 4, label: 'Visok' },
-  { value: 5, label: 'Hronično visok' },
+  { value: 1, label: "Nizak" },
+  { value: 2, label: "Blago podignut" },
+  { value: 3, label: "Umeren" },
+  { value: 4, label: "Visok" },
+  { value: 5, label: "Hronično visok" },
 ];
 
-const dietOptions: { value: UserProfile['dietPreference']; label: string }[] = [
-  { value: 'omnivore', label: 'Sve jedem' },
-  { value: 'mixed', label: 'Meso + povrce fokus' },
-  { value: 'pescatarian', label: 'Riba i biljni izvori' },
-  { value: 'vegetarian', label: 'Vegetarijanski' },
-  { value: 'keto', label: 'Keto (low carb)' },
-  { value: 'carnivore', label: 'Carnivore' },
+const dietOptions: { value: UserProfile["dietPreference"]; label: string }[] = [
+  { value: "omnivore", label: "Sve jedem" },
+  { value: "mixed", label: "Meso + povrce fokus" },
+  { value: "pescatarian", label: "Riba i biljni izvori" },
+  { value: "vegetarian", label: "Vegetarijanski" },
+  { value: "keto", label: "Keto (low carb)" },
+  { value: "carnivore", label: "Carnivore" },
 ];
 
 const initialProfile: UserProfile = {
   age: 28,
   heightCm: 168,
   weightKg: 68,
-  goal: 'lose',
-  activityLevel: 'light',
+  goal: "lose",
+  activityLevel: "light",
   equipment: {
-    location: 'home',
+    location: "home",
     items: [],
   },
   daysPerWeek: 3,
-  dietPreference: 'omnivore',
+  dietPreference: "omnivore",
   allergies: [],
   dislikedFoods: [],
   sleepHours: 7,
@@ -101,7 +101,14 @@ function OptionPill({
         { borderColor: selected ? Colors.light.tint : Colors.light.border },
       ]}
     >
-      <Text style={[styles.pillLabel, selected ? styles.pillLabelSelected : undefined]}>{label}</Text>
+      <Text
+        style={[
+          styles.pillLabel,
+          selected ? styles.pillLabelSelected : undefined,
+        ]}
+      >
+        {label}
+      </Text>
     </TouchableOpacity>
   );
 }
@@ -115,7 +122,13 @@ function StepTitle({ step, index }: { step: Step; index: number }) {
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
   return (
     <View style={styles.section}>
       <Text style={styles.sectionTitle}>{title}</Text>
@@ -126,18 +139,24 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 export default function OnboardingScreen() {
   const router = useRouter();
-  const { plan: existingPlan, setProfile, setPlan, session, isHydrated, markOnboardingComplete } = useAppState();
+  const {
+    plan: existingPlan,
+    setProfile,
+    setPlan,
+    session,
+    isHydrated,
+  } = useAppState();
   const [activeStep, setActiveStep] = useState<Step>(steps[0]);
   const [form, setForm] = useState<UserProfile>(initialProfile);
-  const [allergyInput, setAllergyInput] = useState('');
-  const [dislikeInput, setDislikeInput] = useState('');
+  const [allergyInput, setAllergyInput] = useState("");
+  const [dislikeInput, setDislikeInput] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   const stepIndex = useMemo(() => steps.indexOf(activeStep), [activeStep]);
 
   useEffect(() => {
     if (isHydrated && !session) {
-      router.replace('/auth');
+      router.replace("/auth");
     }
   }, [isHydrated, router, session]);
 
@@ -159,21 +178,25 @@ export default function OnboardingScreen() {
     }
   };
 
-  const handleAddItem = (type: 'allergies' | 'dislikedFoods') => {
-    const value = type === 'allergies' ? allergyInput.trim() : dislikeInput.trim();
+  const handleAddItem = (type: "allergies" | "dislikedFoods") => {
+    const value =
+      type === "allergies" ? allergyInput.trim() : dislikeInput.trim();
     if (!value) return;
     setForm((prev) => ({
       ...prev,
       [type]: Array.from(new Set([...prev[type], value])),
     }));
-    if (type === 'allergies') {
-      setAllergyInput('');
+    if (type === "allergies") {
+      setAllergyInput("");
     } else {
-      setDislikeInput('');
+      setDislikeInput("");
     }
   };
 
-  const handleRemoveItem = (type: 'allergies' | 'dislikedFoods', value: string) => {
+  const handleRemoveItem = (
+    type: "allergies" | "dislikedFoods",
+    value: string,
+  ) => {
     setForm((prev) => ({
       ...prev,
       [type]: prev[type].filter((item) => item !== value),
@@ -181,38 +204,51 @@ export default function OnboardingScreen() {
   };
 
   const validateStep = (): boolean => {
-    if (activeStep === 'O tebi') {
+    if (activeStep === "O tebi") {
       if (!form.age || !form.heightCm || !form.weightKg) {
-        setError('Popuni godine, visinu i tezinu.');
+        setError("Popuni godine, visinu i tezinu.");
         return false;
       }
       const { cycleLengthDays, periodLengthDays, lastPeriodDate } = form;
       const hasCycleData =
         cycleLengthDays != null ||
         periodLengthDays != null ||
-        (lastPeriodDate !== null && lastPeriodDate !== '');
+        (lastPeriodDate !== null && lastPeriodDate !== "");
       if (hasCycleData) {
-        if (cycleLengthDays != null && (cycleLengthDays < 15 || cycleLengthDays > 60)) {
-          setError('Duzina ciklusa treba da bude izmedju 15 i 60 dana.');
+        if (
+          cycleLengthDays != null &&
+          (cycleLengthDays < 15 || cycleLengthDays > 60)
+        ) {
+          setError("Duzina ciklusa treba da bude izmedju 15 i 60 dana.");
           return false;
         }
-        if (periodLengthDays != null && (periodLengthDays < 1 || periodLengthDays > 15)) {
-          setError('Trajanje menstruacije treba da bude izmedju 1 i 15 dana.');
+        if (
+          periodLengthDays != null &&
+          (periodLengthDays < 1 || periodLengthDays > 15)
+        ) {
+          setError("Trajanje menstruacije treba da bude izmedju 1 i 15 dana.");
           return false;
         }
         if (lastPeriodDate && !/^\d{4}-\d{2}-\d{2}$/.test(lastPeriodDate)) {
-          setError('Unesi datum poslednje menstruacije u formatu YYYY-MM-DD ili ostavi prazno.');
+          setError(
+            "Unesi datum poslednje menstruacije u formatu YYYY-MM-DD ili ostavi prazno.",
+          );
           return false;
         }
       }
     }
-    if (activeStep === 'Logistika') {
-      if (form.equipment.location === 'home' && form.equipment.items.length === 0) {
-        setError('Dodaj barem jednu stavku opreme ili oznaci da radis bez opreme.');
+    if (activeStep === "Logistika") {
+      if (
+        form.equipment.location === "home" &&
+        form.equipment.items.length === 0
+      ) {
+        setError(
+          "Dodaj barem jednu stavku opreme ili oznaci da radis bez opreme.",
+        );
         return false;
       }
       if (!form.daysPerWeek) {
-        setError('Izaberi broj trening dana.');
+        setError("Izaberi broj trening dana.");
         return false;
       }
     }
@@ -232,35 +268,41 @@ export default function OnboardingScreen() {
       await setProfile(form);
       const plan = generatePlan(form, existingPlan ?? undefined);
       await setPlan(plan);
-      router.replace('/plan-options' as Href);
+      router.replace("/plan-options" as Href);
     } catch (submitError) {
-      console.error('[Onboarding] Failed to persist profile/plan', submitError);
-      setError('Došlo je do greške pri čuvanju plana. Pokušaj ponovo.');
+      console.error("[Onboarding] Failed to persist profile/plan", submitError);
+      setError("Došlo je do greške pri čuvanju plana. Pokušaj ponovo.");
     }
   };
 
   const equipmentItems =
-    form.equipment.location === 'home'
-      ? ['Trake', 'Bučice', 'Klupa', 'Bez opreme']
-      : ['Šipka', 'Mašine', 'Bučice', 'Kardio zona'];
+    form.equipment.location === "home"
+      ? ["Trake", "Bučice", "Klupa", "Bez opreme"]
+      : ["Šipka", "Mašine", "Bučice", "Kardio zona"];
 
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.select({ ios: 'padding', android: undefined })}
+      behavior={Platform.select({ ios: "padding", android: undefined })}
     >
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <Text style={styles.headline}>Započni promenu</Text>
         <Text style={styles.subhead}>
-          Personalizovan plan za trening, ishranu i navike kroz 5 kratkih koraka.
+          Personalizovan plan za trening, ishranu i navike kroz 5 kratkih
+          koraka.
         </Text>
         <View style={styles.progressBar}>
-          <View style={[styles.progressFill, { width: `${((stepIndex + 1) / steps.length) * 100}%` }]} />
+          <View
+            style={[
+              styles.progressFill,
+              { width: `${((stepIndex + 1) / steps.length) * 100}%` },
+            ]}
+          />
         </View>
 
         <StepTitle step={activeStep} index={stepIndex} />
 
-        {activeStep === 'O tebi' && (
+        {activeStep === "O tebi" && (
           <>
             <Section title="Osnovne informacije">
               <View style={styles.row}>
@@ -270,7 +312,10 @@ export default function OnboardingScreen() {
                     keyboardType="number-pad"
                     value={String(form.age)}
                     onChangeText={(text) =>
-                      setForm((prev) => ({ ...prev, age: Number(text.replace(/[^0-9]/g, '')) || 0 }))
+                      setForm((prev) => ({
+                        ...prev,
+                        age: Number(text.replace(/[^0-9]/g, "")) || 0,
+                      }))
                     }
                     style={styles.input}
                   />
@@ -283,7 +328,7 @@ export default function OnboardingScreen() {
                     onChangeText={(text) =>
                       setForm((prev) => ({
                         ...prev,
-                        heightCm: Number(text.replace(/[^0-9]/g, '')) || 0,
+                        heightCm: Number(text.replace(/[^0-9]/g, "")) || 0,
                       }))
                     }
                     style={styles.input}
@@ -297,7 +342,7 @@ export default function OnboardingScreen() {
                     onChangeText={(text) =>
                       setForm((prev) => ({
                         ...prev,
-                        weightKg: Number(text.replace(/[^0-9.]/g, '')) || 0,
+                        weightKg: Number(text.replace(/[^0-9.]/g, "")) || 0,
                       }))
                     }
                     style={styles.input}
@@ -316,7 +361,7 @@ export default function OnboardingScreen() {
                     onChangeText={(text) =>
                       setForm((prev) => ({
                         ...prev,
-                        sleepHours: Number(text.replace(/[^0-9.]/g, '')) || 0,
+                        sleepHours: Number(text.replace(/[^0-9.]/g, "")) || 0,
                       }))
                     }
                     style={styles.input}
@@ -329,7 +374,12 @@ export default function OnboardingScreen() {
                     key={option.value}
                     label={option.label}
                     selected={form.stressLevel === option.value}
-                    onPress={() => setForm((prev) => ({ ...prev, stressLevel: option.value }))}
+                    onPress={() =>
+                      setForm((prev) => ({
+                        ...prev,
+                        stressLevel: option.value,
+                      }))
+                    }
                   />
                 ))}
               </View>
@@ -337,7 +387,8 @@ export default function OnboardingScreen() {
 
             <Section title="Ciklus (opciono)">
               <Text style={styles.sectionHint}>
-                Pomozite nam da prilagodimo trening i kalorije. Preskoči ako ne želiš da deliš.
+                Pomozite nam da prilagodimo trening i kalorije. Preskoči ako ne
+                želiš da deliš.
               </Text>
               <View style={styles.row}>
                 <View style={styles.inputGroup}>
@@ -345,9 +396,11 @@ export default function OnboardingScreen() {
                   <TextInput
                     keyboardType="number-pad"
                     placeholder="npr. 28"
-                    value={form.cycleLengthDays ? String(form.cycleLengthDays) : ''}
+                    value={
+                      form.cycleLengthDays ? String(form.cycleLengthDays) : ""
+                    }
                     onChangeText={(text) => {
-                      const cleaned = text.replace(/[^0-9]/g, '');
+                      const cleaned = text.replace(/[^0-9]/g, "");
                       setForm((prev) => ({
                         ...prev,
                         cycleLengthDays: cleaned ? Number(cleaned) : null,
@@ -361,9 +414,11 @@ export default function OnboardingScreen() {
                   <TextInput
                     keyboardType="number-pad"
                     placeholder="npr. 5"
-                    value={form.periodLengthDays ? String(form.periodLengthDays) : ''}
+                    value={
+                      form.periodLengthDays ? String(form.periodLengthDays) : ""
+                    }
                     onChangeText={(text) => {
-                      const cleaned = text.replace(/[^0-9]/g, '');
+                      const cleaned = text.replace(/[^0-9]/g, "");
                       setForm((prev) => ({
                         ...prev,
                         periodLengthDays: cleaned ? Number(cleaned) : null,
@@ -377,7 +432,7 @@ export default function OnboardingScreen() {
                 <Text style={styles.label}>Datum poslednje menstruacije</Text>
                 <TextInput
                   placeholder="YYYY-MM-DD"
-                  value={form.lastPeriodDate ?? ''}
+                  value={form.lastPeriodDate ?? ""}
                   onChangeText={(value) =>
                     setForm((prev) => ({
                       ...prev,
@@ -391,7 +446,7 @@ export default function OnboardingScreen() {
           </>
         )}
 
-        {activeStep === 'Ciljevi' && (
+        {activeStep === "Ciljevi" && (
           <>
             <Section title="Glavni cilj">
               <View style={styles.pillRow}>
@@ -400,7 +455,9 @@ export default function OnboardingScreen() {
                     key={goal.value}
                     label={goal.label}
                     selected={form.goal === goal.value}
-                    onPress={() => setForm((prev) => ({ ...prev, goal: goal.value }))}
+                    onPress={() =>
+                      setForm((prev) => ({ ...prev, goal: goal.value }))
+                    }
                   />
                 ))}
               </View>
@@ -413,7 +470,12 @@ export default function OnboardingScreen() {
                     key={activity.value}
                     label={activity.label}
                     selected={form.activityLevel === activity.value}
-                    onPress={() => setForm((prev) => ({ ...prev, activityLevel: activity.value }))}
+                    onPress={() =>
+                      setForm((prev) => ({
+                        ...prev,
+                        activityLevel: activity.value,
+                      }))
+                    }
                   />
                 ))}
               </View>
@@ -422,7 +484,9 @@ export default function OnboardingScreen() {
             <Section title="Zdravstveni uslovi">
               <View style={styles.pillRow}>
                 {conditions.map((condition) => {
-                  const selected = form.healthConditions.includes(condition.value);
+                  const selected = form.healthConditions.includes(
+                    condition.value,
+                  );
                   return (
                     <OptionPill
                       key={condition.value}
@@ -432,7 +496,9 @@ export default function OnboardingScreen() {
                         setForm((prev) => ({
                           ...prev,
                           healthConditions: selected
-                            ? prev.healthConditions.filter((item) => item !== condition.value)
+                            ? prev.healthConditions.filter(
+                                (item) => item !== condition.value,
+                              )
                             : [...prev.healthConditions, condition.value],
                         }))
                       }
@@ -444,7 +510,7 @@ export default function OnboardingScreen() {
           </>
         )}
 
-        {activeStep === 'Ishrana' && (
+        {activeStep === "Ishrana" && (
           <>
             <Section title="Preferencije">
               <View style={styles.pillRow}>
@@ -453,7 +519,12 @@ export default function OnboardingScreen() {
                     key={option.value}
                     label={option.label}
                     selected={form.dietPreference === option.value}
-                    onPress={() => setForm((prev) => ({ ...prev, dietPreference: option.value }))}
+                    onPress={() =>
+                      setForm((prev) => ({
+                        ...prev,
+                        dietPreference: option.value,
+                      }))
+                    }
                   />
                 ))}
               </View>
@@ -467,7 +538,10 @@ export default function OnboardingScreen() {
                   onChangeText={setAllergyInput}
                   style={[styles.input, styles.inlineField]}
                 />
-                <TouchableOpacity style={styles.inlineButton} onPress={() => handleAddItem('allergies')}>
+                <TouchableOpacity
+                  style={styles.inlineButton}
+                  onPress={() => handleAddItem("allergies")}
+                >
                   <Text style={styles.inlineButtonLabel}>Dodaj</Text>
                 </TouchableOpacity>
               </View>
@@ -475,7 +549,7 @@ export default function OnboardingScreen() {
                 {form.allergies.map((item) => (
                   <TouchableOpacity
                     key={item}
-                    onPress={() => handleRemoveItem('allergies', item)}
+                    onPress={() => handleRemoveItem("allergies", item)}
                     style={styles.tag}
                   >
                     <Text style={styles.tagText}>{item}</Text>
@@ -494,7 +568,7 @@ export default function OnboardingScreen() {
                 />
                 <TouchableOpacity
                   style={styles.inlineButton}
-                  onPress={() => handleAddItem('dislikedFoods')}
+                  onPress={() => handleAddItem("dislikedFoods")}
                 >
                   <Text style={styles.inlineButtonLabel}>Dodaj</Text>
                 </TouchableOpacity>
@@ -503,7 +577,7 @@ export default function OnboardingScreen() {
                 {form.dislikedFoods.map((item) => (
                   <TouchableOpacity
                     key={item}
-                    onPress={() => handleRemoveItem('dislikedFoods', item)}
+                    onPress={() => handleRemoveItem("dislikedFoods", item)}
                     style={styles.tag}
                   >
                     <Text style={styles.tagText}>{item}</Text>
@@ -512,29 +586,37 @@ export default function OnboardingScreen() {
               </View>
             </Section>
           </>
-         )}
+        )}
 
-        {activeStep === 'Logistika' && (
+        {activeStep === "Logistika" && (
           <>
             <Section title="Gde treniras?">
               <View style={styles.pillRow}>
                 <OptionPill
                   label="Kuci"
-                  selected={form.equipment.location === 'home'}
+                  selected={form.equipment.location === "home"}
                   onPress={() =>
                     setForm((prev) => ({
                       ...prev,
-                      equipment: { ...prev.equipment, location: 'home', items: [] },
+                      equipment: {
+                        ...prev.equipment,
+                        location: "home",
+                        items: [],
+                      },
                     }))
                   }
                 />
                 <OptionPill
                   label="Teretana"
-                  selected={form.equipment.location === 'gym'}
+                  selected={form.equipment.location === "gym"}
                   onPress={() =>
                     setForm((prev) => ({
                       ...prev,
-                      equipment: { ...prev.equipment, location: 'gym', items: [] },
+                      equipment: {
+                        ...prev.equipment,
+                        location: "gym",
+                        items: [],
+                      },
                     }))
                   }
                 />
@@ -554,14 +636,24 @@ export default function OnboardingScreen() {
                           equipment: {
                             ...prev.equipment,
                             items: selected
-                              ? prev.equipment.items.filter((option) => option !== item)
+                              ? prev.equipment.items.filter(
+                                  (option) => option !== item,
+                                )
                               : [...prev.equipment.items, item],
                           },
                         }))
                       }
-                      style={[styles.tag, selected ? styles.tagSelected : undefined]}
+                      style={[
+                        styles.tag,
+                        selected ? styles.tagSelected : undefined,
+                      ]}
                     >
-                      <Text style={[styles.tagText, selected ? styles.tagTextSelected : undefined]}>
+                      <Text
+                        style={[
+                          styles.tagText,
+                          selected ? styles.tagTextSelected : undefined,
+                        ]}
+                      >
                         {item}
                       </Text>
                     </TouchableOpacity>
@@ -580,7 +672,7 @@ export default function OnboardingScreen() {
                     onPress={() =>
                       setForm((prev) => ({
                         ...prev,
-                        daysPerWeek: day as UserProfile['daysPerWeek'],
+                        daysPerWeek: day as UserProfile["daysPerWeek"],
                       }))
                     }
                   />
@@ -590,8 +682,9 @@ export default function OnboardingScreen() {
 
             <Section title="Spremna si!">
               <Text style={styles.summaryText}>
-                Posle zavrsetka generisemo treninge, rotaciju kalorija i navike uskladjene sa tvojim
-                ulaznim podacima. Plan mozes dodatno prilagoditi kasnije.
+                Posle zavrsetka generisemo treninge, rotaciju kalorija i navike
+                uskladjene sa tvojim ulaznim podacima. Plan mozes dodatno
+                prilagoditi kasnije.
               </Text>
             </Section>
           </>
@@ -606,11 +699,17 @@ export default function OnboardingScreen() {
             </TouchableOpacity>
           )}
           {stepIndex < steps.length - 1 ? (
-            <TouchableOpacity style={styles.primaryButton} onPress={handleContinue}>
+            <TouchableOpacity
+              style={styles.primaryButton}
+              onPress={handleContinue}
+            >
               <Text style={styles.primaryButtonLabel}>Nastavi</Text>
             </TouchableOpacity>
           ) : (
-            <TouchableOpacity style={styles.primaryButton} onPress={handleSubmit}>
+            <TouchableOpacity
+              style={styles.primaryButton}
+              onPress={handleSubmit}
+            >
               <Text style={styles.primaryButtonLabel}>Zavrsi onboarding</Text>
             </TouchableOpacity>
           )}
@@ -630,15 +729,15 @@ const styles = StyleSheet.create({
     paddingBottom: 48,
   },
   headline: {
-    fontFamily: 'PlayfairDisplay_700Bold',
+    fontFamily: "PlayfairDisplay_700Bold",
     fontSize: 28,
     color: Colors.light.text,
     marginBottom: 8,
   },
   subhead: {
-    fontFamily: 'Inter_400Regular',
+    fontFamily: "Inter_400Regular",
     fontSize: 16,
-    color: '#5C5C5C',
+    color: "#5C5C5C",
     marginBottom: 24,
   },
   progressBar: {
@@ -648,13 +747,13 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   progressFill: {
-    height: '100%',
+    height: "100%",
     backgroundColor: Colors.light.tint,
     borderRadius: 999,
   },
   stepHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 12,
   },
   stepIndex: {
@@ -663,13 +762,13 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     backgroundColor: Colors.light.tint,
     color: Colors.light.background,
-    textAlign: 'center',
-    textAlignVertical: 'center',
-    fontFamily: 'Inter_600SemiBold',
+    textAlign: "center",
+    textAlignVertical: "center",
+    fontFamily: "Inter_600SemiBold",
     marginRight: 12,
   },
   stepTitle: {
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: "Inter_600SemiBold",
     fontSize: 18,
     color: Colors.light.text,
   },
@@ -677,27 +776,27 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   sectionTitle: {
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: "Inter_600SemiBold",
     fontSize: 16,
     marginBottom: 12,
     color: Colors.light.text,
   },
   sectionHint: {
-    fontFamily: 'Inter_400Regular',
-    color: '#8C8C8C',
+    fontFamily: "Inter_400Regular",
+    color: "#8C8C8C",
     marginBottom: 12,
   },
   row: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 12,
   },
   inputGroup: {
     flex: 1,
   },
   label: {
-    fontFamily: 'Inter_500Medium',
+    fontFamily: "Inter_500Medium",
     fontSize: 14,
-    color: '#6B5E58',
+    color: "#6B5E58",
     marginBottom: 6,
   },
   input: {
@@ -705,15 +804,15 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: "Inter_400Regular",
     fontSize: 16,
     borderWidth: 1,
     borderColor: Colors.light.border,
     color: Colors.light.text,
   },
   pillRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 12,
   },
   pillColumn: {
@@ -730,15 +829,15 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.light.tint,
   },
   pillLabel: {
-    fontFamily: 'Inter_500Medium',
+    fontFamily: "Inter_500Medium",
     color: Colors.light.text,
   },
   pillLabelSelected: {
     color: Colors.light.background,
   },
   inlineInput: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 12,
   },
   inlineField: {
@@ -751,12 +850,12 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.light.tint,
   },
   inlineButtonLabel: {
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: "Inter_600SemiBold",
     color: Colors.light.background,
   },
   tagContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 10,
     marginTop: 12,
   },
@@ -770,27 +869,27 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.light.tint,
   },
   tagText: {
-    fontFamily: 'Inter_500Medium',
+    fontFamily: "Inter_500Medium",
     color: Colors.light.text,
   },
   tagTextSelected: {
     color: Colors.light.background,
   },
   summaryText: {
-    fontFamily: 'Inter_400Regular',
+    fontFamily: "Inter_400Regular",
     fontSize: 15,
-    color: '#5C5C5C',
+    color: "#5C5C5C",
     lineHeight: 22,
   },
   error: {
-    color: '#AF1F1F',
-    fontFamily: 'Inter_500Medium',
+    color: "#AF1F1F",
+    fontFamily: "Inter_500Medium",
     marginBottom: 16,
   },
   actions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     gap: 12,
     marginTop: 12,
   },
@@ -799,11 +898,11 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.light.tint,
     paddingVertical: 14,
     borderRadius: 14,
-    alignItems: 'center',
+    alignItems: "center",
   },
   primaryButtonLabel: {
     color: Colors.light.background,
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: "Inter_600SemiBold",
     fontSize: 16,
   },
   secondaryButton: {
@@ -815,28 +914,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.light.background,
   },
   secondaryButtonLabel: {
-    fontFamily: 'Inter_500Medium',
+    fontFamily: "Inter_500Medium",
     color: Colors.light.text,
   },
 });
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

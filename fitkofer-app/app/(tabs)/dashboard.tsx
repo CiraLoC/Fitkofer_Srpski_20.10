@@ -1,34 +1,48 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from "react";
 import {
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
-} from 'react-native';
+} from "react-native";
 
-import Colors from '@/constants/Colors';
-import { formatLocalISODate } from '@/lib/utils/date';
-import { useAppState } from '@/state/AppStateContext';
-import type { DayIntensity, StressLevel } from '@/types';
+import Colors from "@/constants/Colors";
+import { formatLocalISODate } from "@/lib/utils/date";
+import { useAppState } from "@/state/AppStateContext";
+import type { DayIntensity, StressLevel } from "@/types";
 
-const dayLabels = ['Ponedeljak', 'Utorak', 'Sreda', 'Četvrtak', 'Petak', 'Subota', 'Nedelja'];
+const dayLabels = [
+  "Ponedeljak",
+  "Utorak",
+  "Sreda",
+  "Četvrtak",
+  "Petak",
+  "Subota",
+  "Nedelja",
+];
 
 const intensityCopy: Record<DayIntensity, string> = {
-  low: 'Low dan (regeneracija)',
-  mid: 'Mid dan (standardni unos)',
-  high: 'High dan (trening + puni obroci)',
+  low: "Low dan (regeneracija)",
+  mid: "Mid dan (standardni unos)",
+  high: "High dan (trening + puni obroci)",
 };
 
 const energyOptions: { label: string; value: StressLevel }[] = [
-  { label: 'Niska', value: 1 },
-  { label: 'Ok', value: 3 },
-  { label: 'Visoka', value: 5 },
+  { label: "Niska", value: 1 },
+  { label: "Ok", value: 3 },
+  { label: "Visoka", value: 5 },
 ];
 
 export default function DashboardScreen() {
-  const { plan, logs, toggleWorkoutCompletion, toggleMealCompletion, toggleHabitCompletion, setDailyEnergy } =
-    useAppState();
+  const {
+    plan,
+    logs,
+    toggleWorkoutCompletion,
+    toggleMealCompletion,
+    toggleHabitCompletion,
+    setDailyEnergy,
+  } = useAppState();
   const today = useMemo(() => new Date(), []);
   const isoDate = formatLocalISODate(today);
   const log = logs[isoDate];
@@ -36,7 +50,9 @@ export default function DashboardScreen() {
   if (!plan) {
     return (
       <View style={styles.centered}>
-        <Text style={styles.emptyText}>Nema aktivnog plana. Prođi onboarding da kreiraš plan.</Text>
+        <Text style={styles.emptyText}>
+          Nema aktivnog plana. Prođi onboarding da kreiraš plan.
+        </Text>
       </View>
     );
   }
@@ -45,24 +61,30 @@ export default function DashboardScreen() {
   const dayPlan = plan.nutrition.weeklyPlan?.[dayIndex];
   const rotation = dayPlan?.dayType ?? plan.nutrition.rotation[dayIndex];
   const dailyNutrition = dayPlan ?? plan.nutrition.planByDayType[rotation];
-  const scheduled = plan.training.schedule.find((entry) => entry.day === dayIndex);
-  const workout = plan.training.sessions.find((session) => session.id === scheduled?.sessionId);
+  const scheduled = plan.training.schedule.find(
+    (entry) => entry.day === dayIndex,
+  );
+  const workout = plan.training.sessions.find(
+    (session) => session.id === scheduled?.sessionId,
+  );
   const habits = plan.habits.dailyHabits;
 
   const totalTodos =
     (workout ? 1 : 0) + dailyNutrition.meals.length + habits.length;
   const completedTodos =
     (workout && log?.workoutsCompleted.includes(workout.id) ? 1 : 0) +
-    dailyNutrition.meals.filter((meal) => log?.mealsCompleted.includes(meal.id)).length +
+    dailyNutrition.meals.filter((meal) => log?.mealsCompleted.includes(meal.id))
+      .length +
     habits.filter((habit) => log?.habitsCompleted.includes(habit.id)).length;
-  const adherence = totalTodos > 0 ? Math.round((completedTodos / totalTodos) * 100) : 0;
+  const adherence =
+    totalTodos > 0 ? Math.round((completedTodos / totalTodos) * 100) : 0;
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View>
         <Text style={styles.greeting}>Zdravo!</Text>
         <Text style={styles.dateText}>
-          {dayLabels[dayIndex]}, {today.toLocaleDateString('sr-RS')}
+          {dayLabels[dayIndex]}, {today.toLocaleDateString("sr-RS")}
         </Text>
       </View>
 
@@ -79,8 +101,8 @@ export default function DashboardScreen() {
         <Text style={styles.cardTitle}>Današnji fokus</Text>
         <Text style={styles.bodyText}>{intensityCopy[rotation]}</Text>
         <Text style={styles.macroHighlight}>
-          {dailyNutrition.calories} kcal · P {dailyNutrition.protein}g · U {dailyNutrition.carbs}g · M{' '}
-          {dailyNutrition.fats}g
+          {dailyNutrition.calories} kcal · P {dailyNutrition.protein}g · U{" "}
+          {dailyNutrition.carbs}g · M {dailyNutrition.fats}g
         </Text>
       </View>
 
@@ -88,20 +110,27 @@ export default function DashboardScreen() {
         <View style={styles.card}>
           <View style={styles.cardHeader}>
             <Text style={styles.cardTitle}>Trening</Text>
-            <TouchableOpacity onPress={() => toggleWorkoutCompletion(isoDate, workout.id)}>
+            <TouchableOpacity
+              onPress={() => toggleWorkoutCompletion(isoDate, workout.id)}
+            >
               <Text style={styles.actionLink}>
-                {log?.workoutsCompleted.includes(workout.id) ? 'Poništi' : 'Označi kao završeno'}
+                {log?.workoutsCompleted.includes(workout.id)
+                  ? "Poništi"
+                  : "Označi kao završeno"}
               </Text>
             </TouchableOpacity>
           </View>
           <Text style={styles.workoutTitle}>{workout.title}</Text>
-          <Text style={styles.bodyText}>{workout.durationMinutes} min · {workout.exercises.length} vežbi</Text>
+          <Text style={styles.bodyText}>
+            {workout.durationMinutes} min · {workout.exercises.length} vežbi
+          </Text>
           <View style={styles.exerciseList}>
             {workout.exercises.map((exercise) => (
               <View key={exercise.id} style={styles.exerciseItem}>
                 <Text style={styles.exerciseName}>{exercise.name}</Text>
                 <Text style={styles.exerciseMeta}>
-                  {exercise.sets} serije · {exercise.repRange} ponavljanja · {exercise.equipment}
+                  {exercise.sets} serije · {exercise.repRange} ponavljanja ·{" "}
+                  {exercise.equipment}
                 </Text>
               </View>
             ))}
@@ -110,7 +139,9 @@ export default function DashboardScreen() {
       ) : (
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Oporavak</Text>
-          <Text style={styles.bodyText}>Danas nema strukturiranog treninga. Fokus na šetnju i NSDR.</Text>
+          <Text style={styles.bodyText}>
+            Danas nema strukturiranog treninga. Fokus na šetnju i NSDR.
+          </Text>
         </View>
       )}
 
@@ -121,22 +152,34 @@ export default function DashboardScreen() {
           return (
             <TouchableOpacity
               key={meal.id}
-              style={[styles.mealItem, completed ? styles.mealItemCompleted : undefined]}
+              style={[
+                styles.mealItem,
+                completed ? styles.mealItemCompleted : undefined,
+              ]}
               onPress={() => toggleMealCompletion(isoDate, meal.id)}
             >
               <View style={styles.mealHeader}>
-                <Text style={[styles.mealTitle, completed ? styles.completedText : undefined]}>{meal.title}</Text>
+                <Text
+                  style={[
+                    styles.mealTitle,
+                    completed ? styles.completedText : undefined,
+                  ]}
+                >
+                  {meal.title}
+                </Text>
                 <Text style={styles.mealCalories}>{meal.calories} kcal</Text>
               </View>
               <Text style={styles.mealMacros}>
                 P {meal.protein}g · U {meal.carbs}g · M {meal.fats}g
               </Text>
-              <Text style={styles.mealTags}>{meal.tags.join(' • ')}</Text>
+              <Text style={styles.mealTags}>{meal.tags.join(" • ")}</Text>
             </TouchableOpacity>
           );
         })}
         <View style={styles.swapRow}>
-          <Text style={styles.bodyText}>Treba zamena? Na ekranu Ishrana možeš izabrati alternativu.</Text>
+          <Text style={styles.bodyText}>
+            Treba zamena? Na ekranu Ishrana možeš izabrati alternativu.
+          </Text>
         </View>
       </View>
 
@@ -148,10 +191,18 @@ export default function DashboardScreen() {
             return (
               <TouchableOpacity
                 key={habit.id}
-                style={[styles.habitItem, completed ? styles.habitItemCompleted : undefined]}
+                style={[
+                  styles.habitItem,
+                  completed ? styles.habitItemCompleted : undefined,
+                ]}
                 onPress={() => toggleHabitCompletion(isoDate, habit.id)}
               >
-                <Text style={[styles.habitTitle, completed ? styles.completedText : undefined]}>
+                <Text
+                  style={[
+                    styles.habitTitle,
+                    completed ? styles.completedText : undefined,
+                  ]}
+                >
                   {habit.title}
                 </Text>
                 <Text style={styles.habitDescription}>{habit.description}</Text>
@@ -171,9 +222,17 @@ export default function DashboardScreen() {
               <TouchableOpacity
                 key={option.value}
                 onPress={() => setDailyEnergy(isoDate, option.value)}
-                style={[styles.energyPill, selected ? styles.energyPillSelected : undefined]}
+                style={[
+                  styles.energyPill,
+                  selected ? styles.energyPillSelected : undefined,
+                ]}
               >
-                <Text style={[styles.energyLabel, selected ? styles.energyLabelSelected : undefined]}>
+                <Text
+                  style={[
+                    styles.energyLabel,
+                    selected ? styles.energyLabelSelected : undefined,
+                  ]}
+                >
                   {option.label}
                 </Text>
               </TouchableOpacity>
@@ -197,24 +256,24 @@ const styles = StyleSheet.create({
   },
   centered: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     padding: 24,
     backgroundColor: Colors.light.background,
   },
   emptyText: {
-    fontFamily: 'Inter_500Medium',
+    fontFamily: "Inter_500Medium",
     color: Colors.light.text,
-    textAlign: 'center',
+    textAlign: "center",
   },
   greeting: {
-    fontFamily: 'PlayfairDisplay_700Bold',
+    fontFamily: "PlayfairDisplay_700Bold",
     fontSize: 26,
     color: Colors.light.text,
   },
   dateText: {
-    fontFamily: 'Inter_400Regular',
-    color: '#6B5E58',
+    fontFamily: "Inter_400Regular",
+    color: "#6B5E58",
   },
   card: {
     backgroundColor: Colors.light.card,
@@ -225,21 +284,21 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   cardTitle: {
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: "Inter_600SemiBold",
     fontSize: 18,
     color: Colors.light.text,
   },
   bodyText: {
-    fontFamily: 'Inter_400Regular',
-    color: '#5C5C5C',
+    fontFamily: "Inter_400Regular",
+    color: "#5C5C5C",
   },
   adherenceValue: {
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: "Inter_600SemiBold",
     fontSize: 36,
     color: Colors.light.tint,
   },
@@ -249,16 +308,16 @@ const styles = StyleSheet.create({
     borderRadius: 999,
   },
   progressFill: {
-    height: '100%',
+    height: "100%",
     backgroundColor: Colors.light.tint,
     borderRadius: 999,
   },
   macroHighlight: {
-    fontFamily: 'Inter_500Medium',
+    fontFamily: "Inter_500Medium",
     color: Colors.light.text,
   },
   workoutTitle: {
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: "Inter_600SemiBold",
     fontSize: 16,
     color: Colors.light.text,
   },
@@ -273,12 +332,12 @@ const styles = StyleSheet.create({
     borderColor: Colors.light.border,
   },
   exerciseName: {
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: "Inter_600SemiBold",
     color: Colors.light.text,
   },
   exerciseMeta: {
-    fontFamily: 'Inter_400Regular',
-    color: '#6B5E58',
+    fontFamily: "Inter_400Regular",
+    color: "#6B5E58",
     marginTop: 4,
   },
   mealItem: {
@@ -293,25 +352,25 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.palette.sand,
   },
   mealHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   mealTitle: {
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: "Inter_600SemiBold",
     color: Colors.light.text,
   },
   mealCalories: {
-    fontFamily: 'Inter_500Medium',
+    fontFamily: "Inter_500Medium",
     color: Colors.light.tint,
   },
   mealMacros: {
-    fontFamily: 'Inter_400Regular',
-    color: '#6B5E58',
+    fontFamily: "Inter_400Regular",
+    color: "#6B5E58",
   },
   mealTags: {
-    fontFamily: 'Inter_400Regular',
-    color: '#8C8C8C',
+    fontFamily: "Inter_400Regular",
+    color: "#8C8C8C",
   },
   swapRow: {
     paddingTop: 8,
@@ -331,30 +390,30 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.palette.sand,
   },
   habitTitle: {
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: "Inter_600SemiBold",
     color: Colors.light.text,
   },
   habitDescription: {
-    fontFamily: 'Inter_400Regular',
-    color: '#5C5C5C',
+    fontFamily: "Inter_400Regular",
+    color: "#5C5C5C",
   },
   actionLink: {
-    fontFamily: 'Inter_500Medium',
+    fontFamily: "Inter_500Medium",
     color: Colors.light.tint,
   },
   completedText: {
-    textDecorationLine: 'line-through',
-    color: '#8C726C',
+    textDecorationLine: "line-through",
+    color: "#8C726C",
   },
   pillRow: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 12,
   },
   energyPill: {
     flex: 1,
     borderRadius: 12,
     paddingVertical: 12,
-    alignItems: 'center',
+    alignItems: "center",
     borderWidth: 1,
     borderColor: Colors.light.border,
   },
@@ -363,7 +422,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.light.tint,
   },
   energyLabel: {
-    fontFamily: 'Inter_500Medium',
+    fontFamily: "Inter_500Medium",
     color: Colors.light.text,
   },
   energyLabelSelected: {

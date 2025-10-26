@@ -1,4 +1,4 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   createContext,
   ReactNode,
@@ -9,10 +9,10 @@ import {
   useReducer,
   useRef,
   useState,
-} from 'react';
-import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
+} from "react";
+import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 
-import { createMonthlyCalendar } from '@/lib/calendar/month';
+import { createMonthlyCalendar } from "@/lib/calendar/month";
 import type {
   AppActions,
   AppState,
@@ -23,8 +23,8 @@ import type {
   SyncStatus,
   StressLevel,
   UserProfile,
-} from '@/types';
-import { supabase } from '@/lib/supabase/client';
+} from "@/types";
+import { supabase } from "@/lib/supabase/client";
 import {
   deletePlan,
   deleteProfile,
@@ -34,9 +34,11 @@ import {
   upsertDailyLog,
   upsertPlan,
   upsertProfile,
-} from '@/lib/supabase/storage';
+} from "@/lib/supabase/storage";
 
-const AppStateContext = createContext<AppStateContextValue | undefined>(undefined);
+const AppStateContext = createContext<AppStateContextValue | undefined>(
+  undefined,
+);
 
 const initialState: AppState = {
   profile: null,
@@ -44,25 +46,25 @@ const initialState: AppState = {
   logs: {},
 };
 
-const ONBOARDING_FLAG_BASE = 'fitkofer:onboardingCompleted';
+const ONBOARDING_FLAG_BASE = "fitkofer:onboardingCompleted";
 const MS_IN_DAY = 1000 * 60 * 60 * 24;
 
 type Action =
-  | { type: 'SET_PROFILE'; payload: UserProfile }
-  | { type: 'SET_PLAN'; payload: GeneratedPlan }
-  | { type: 'RESET' }
-  | { type: 'UPSERT_LOG'; payload: DailyLog }
-  | { type: 'HYDRATE'; payload: AppState };
+  | { type: "SET_PROFILE"; payload: UserProfile }
+  | { type: "SET_PLAN"; payload: GeneratedPlan }
+  | { type: "RESET" }
+  | { type: "UPSERT_LOG"; payload: DailyLog }
+  | { type: "HYDRATE"; payload: AppState };
 
 function reducer(state: AppState, action: Action): AppState {
   switch (action.type) {
-    case 'SET_PROFILE':
+    case "SET_PROFILE":
       return { ...state, profile: action.payload };
-    case 'SET_PLAN':
+    case "SET_PLAN":
       return { ...state, plan: action.payload };
-    case 'RESET':
+    case "RESET":
       return initialState;
-    case 'UPSERT_LOG': {
+    case "UPSERT_LOG": {
       return {
         ...state,
         logs: {
@@ -71,7 +73,7 @@ function reducer(state: AppState, action: Action): AppState {
         },
       };
     }
-    case 'HYDRATE':
+    case "HYDRATE":
       return action.payload;
     default:
       return state;
@@ -89,14 +91,20 @@ function ensureLog(logs: Record<string, DailyLog>, date: string): DailyLog {
   );
 }
 
-function normalizePlan(plan: GeneratedPlan | null, profile: UserProfile | null): GeneratedPlan | null {
+function normalizePlan(
+  plan: GeneratedPlan | null,
+  profile: UserProfile | null,
+): GeneratedPlan | null {
   if (!plan) return null;
 
   const subscriptionStart = plan.subscriptionStart ?? plan.createdAt;
   const subscriptionEnd =
     plan.subscriptionEnd ??
-    new Date(new Date(subscriptionStart).getTime() + 29 * MS_IN_DAY).toISOString();
-  const subscriptionTier: PlanSubscriptionTier = plan.subscriptionTier ?? 'unselected';
+    new Date(
+      new Date(subscriptionStart).getTime() + 29 * MS_IN_DAY,
+    ).toISOString();
+  const subscriptionTier: PlanSubscriptionTier =
+    plan.subscriptionTier ?? "unselected";
 
   const fallbackProfile =
     profile ??
@@ -115,10 +123,12 @@ function normalizePlan(plan: GeneratedPlan | null, profile: UserProfile | null):
     plan.profileHistory && plan.profileHistory.length > 0
       ? plan.profileHistory
       : fallbackProfile
-      ? [{ capturedAt: plan.createdAt, profile: fallbackProfile }]
-      : [];
+        ? [{ capturedAt: plan.createdAt, profile: fallbackProfile }]
+        : [];
 
-  const mergedHistory = initialHistory.some((item) => item.capturedAt === snapshot.capturedAt)
+  const mergedHistory = initialHistory.some(
+    (item) => item.capturedAt === snapshot.capturedAt,
+  )
     ? initialHistory
     : [...initialHistory, snapshot];
 
@@ -134,7 +144,7 @@ function normalizePlan(plan: GeneratedPlan | null, profile: UserProfile | null):
 export function AppStateProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, initialState);
   const [isHydrated, setIsHydrated] = useState(false);
-  const [syncStatus, setSyncStatus] = useState<SyncStatus>('idle');
+  const [syncStatus, setSyncStatus] = useState<SyncStatus>("idle");
   const [lastError, setLastError] = useState<string | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const userIdRef = useRef<string | null>(null);
@@ -142,8 +152,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(false);
 
   const handleError = useCallback((error: unknown) => {
-    console.error('[AppState] Supabase sync error', error);
-    setSyncStatus('error');
+    console.error("[AppState] Supabase sync error", error);
+    setSyncStatus("error");
     setLastError(error instanceof Error ? error.message : String(error));
   }, []);
 
@@ -156,7 +166,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         : null;
 
       if (!session?.user) {
-        dispatch({ type: 'RESET' });
+        dispatch({ type: "RESET" });
         setHasCompletedOnboarding(false);
         setIsHydrated(true);
         return;
@@ -165,14 +175,15 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       let storedFlag = false;
       if (onboardingKeyRef.current) {
         try {
-          storedFlag = (await AsyncStorage.getItem(onboardingKeyRef.current)) === 'true';
+          storedFlag =
+            (await AsyncStorage.getItem(onboardingKeyRef.current)) === "true";
         } catch (flagError) {
-          console.warn('[AppState] Failed to read onboarding flag', flagError);
+          console.warn("[AppState] Failed to read onboarding flag", flagError);
         }
       }
       setHasCompletedOnboarding(storedFlag);
 
-      setSyncStatus('syncing');
+      setSyncStatus("syncing");
       try {
         const [profileResult, planResult, logs] = await Promise.all([
           fetchProfile(session.user.id),
@@ -184,7 +195,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         const normalizedPlan = normalizePlan(planResult, fetchedProfile);
 
         dispatch({
-          type: 'HYDRATE',
+          type: "HYDRATE",
           payload: {
             profile: fetchedProfile,
             plan: normalizedPlan,
@@ -197,16 +208,19 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         setHasCompletedOnboarding(completed);
         if (completed && onboardingKeyRef.current) {
           try {
-            await AsyncStorage.setItem(onboardingKeyRef.current, 'true');
+            await AsyncStorage.setItem(onboardingKeyRef.current, "true");
           } catch (persistError) {
-            console.warn('[AppState] Failed to persist onboarding flag', persistError);
+            console.warn(
+              "[AppState] Failed to persist onboarding flag",
+              persistError,
+            );
           }
         }
       } catch (error) {
         handleError(error);
       } finally {
         setIsHydrated(true);
-        setSyncStatus('idle');
+        setSyncStatus("idle");
       }
     },
     [handleError],
@@ -249,10 +263,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       if (!userId) {
         return;
       }
-      setSyncStatus('syncing');
+      setSyncStatus("syncing");
       try {
         await operation();
-        setSyncStatus('idle');
+        setSyncStatus("idle");
         setLastError(null);
       } catch (error) {
         handleError(error);
@@ -264,7 +278,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const actions: AppActions = useMemo(
     () => ({
       async setProfile(profile: UserProfile) {
-        dispatch({ type: 'SET_PROFILE', payload: profile });
+        dispatch({ type: "SET_PROFILE", payload: profile });
         await withSync(async () => {
           const userId = userIdRef.current;
           if (!userId) return;
@@ -272,7 +286,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         });
       },
       async setPlan(plan: GeneratedPlan) {
-        dispatch({ type: 'SET_PLAN', payload: plan });
+        dispatch({ type: "SET_PLAN", payload: plan });
         await withSync(async () => {
           const userId = userIdRef.current;
           if (!userId) return;
@@ -280,7 +294,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         });
       },
       async resetPlan() {
-        dispatch({ type: 'RESET' });
+        dispatch({ type: "RESET" });
         await withSync(async () => {
           const userId = userIdRef.current;
           if (!userId) return;
@@ -292,7 +306,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           try {
             await AsyncStorage.removeItem(onboardingKeyRef.current);
           } catch (flagError) {
-            console.warn('[AppState] Failed to remove onboarding flag', flagError);
+            console.warn(
+              "[AppState] Failed to remove onboarding flag",
+              flagError,
+            );
           }
         }
       },
@@ -304,7 +321,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           : [...log.workoutsCompleted, workoutId];
         const nextLog = { ...log, workoutsCompleted };
         dispatch({
-          type: 'UPSERT_LOG',
+          type: "UPSERT_LOG",
           payload: nextLog,
         });
         await withSync(async () => {
@@ -321,7 +338,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           : [...log.mealsCompleted, mealId];
         const nextLog = { ...log, mealsCompleted };
         dispatch({
-          type: 'UPSERT_LOG',
+          type: "UPSERT_LOG",
           payload: nextLog,
         });
         await withSync(async () => {
@@ -338,7 +355,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           : [...log.habitsCompleted, habitId];
         const nextLog = { ...log, habitsCompleted };
         dispatch({
-          type: 'UPSERT_LOG',
+          type: "UPSERT_LOG",
           payload: nextLog,
         });
         await withSync(async () => {
@@ -351,7 +368,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         const log = ensureLog(state.logs, date);
         const nextLog = { ...log, energy: level };
         dispatch({
-          type: 'UPSERT_LOG',
+          type: "UPSERT_LOG",
           payload: nextLog,
         });
         await withSync(async () => {
@@ -364,23 +381,29 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         setHasCompletedOnboarding(true);
         if (onboardingKeyRef.current) {
           try {
-            await AsyncStorage.setItem(onboardingKeyRef.current, 'true');
+            await AsyncStorage.setItem(onboardingKeyRef.current, "true");
           } catch (flagError) {
-            console.warn('[AppState] Failed to persist onboarding flag', flagError);
+            console.warn(
+              "[AppState] Failed to persist onboarding flag",
+              flagError,
+            );
           }
         }
       },
       async signOut() {
         await supabase.auth.signOut();
         setSession(null);
-        dispatch({ type: 'RESET' });
+        dispatch({ type: "RESET" });
         userIdRef.current = null;
         setHasCompletedOnboarding(false);
         if (onboardingKeyRef.current) {
           try {
             await AsyncStorage.removeItem(onboardingKeyRef.current);
           } catch (flagError) {
-            console.warn('[AppState] Failed to remove onboarding flag', flagError);
+            console.warn(
+              "[AppState] Failed to remove onboarding flag",
+              flagError,
+            );
           }
         }
         onboardingKeyRef.current = null;
@@ -405,16 +428,29 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       monthlyCalendar,
       session,
     }),
-    [actions, hasCompletedOnboarding, isHydrated, lastError, monthlyCalendar, session, state, syncStatus],
+    [
+      actions,
+      hasCompletedOnboarding,
+      isHydrated,
+      lastError,
+      monthlyCalendar,
+      session,
+      state,
+      syncStatus,
+    ],
   );
 
-  return <AppStateContext.Provider value={value}>{children}</AppStateContext.Provider>;
+  return (
+    <AppStateContext.Provider value={value}>
+      {children}
+    </AppStateContext.Provider>
+  );
 }
 
 export function useAppState() {
   const ctx = useContext(AppStateContext);
   if (!ctx) {
-    throw new Error('useAppState must be used within an AppStateProvider');
+    throw new Error("useAppState must be used within an AppStateProvider");
   }
   return ctx;
 }

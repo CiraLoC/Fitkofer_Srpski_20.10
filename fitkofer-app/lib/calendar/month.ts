@@ -6,11 +6,11 @@ import type {
   DailyNutritionPlan,
   GeneratedPlan,
   WorkoutSession,
-} from '@/types';
-import { formatLocalISODate } from '@/lib/utils/date';
+} from "@/types";
+import { formatLocalISODate } from "@/lib/utils/date";
 
 const MS_IN_DAY = 1000 * 60 * 60 * 24;
-const DAY_LABELS = ['Pon', 'Uto', 'Sre', 'Čet', 'Pet', 'Sub', 'Ned'];
+const DAY_LABELS = ["Pon", "Uto", "Sre", "Čet", "Pet", "Sub", "Ned"];
 
 function startOfDay(date: Date) {
   const next = new Date(date);
@@ -52,14 +52,29 @@ function buildWorkoutSummary(
   };
 }
 
-export function createMonthlyCalendar(plan: GeneratedPlan, logs: Record<string, DailyLog>): CalendarData {
-  const subscriptionStart = startOfDay(plan.subscriptionStart ? new Date(plan.subscriptionStart) : new Date(plan.createdAt));
-  const subscriptionEnd = startOfDay(plan.subscriptionEnd ? new Date(plan.subscriptionEnd) : new Date(subscriptionStart.getTime() + 29 * MS_IN_DAY));
+export function createMonthlyCalendar(
+  plan: GeneratedPlan,
+  logs: Record<string, DailyLog>,
+): CalendarData {
+  const subscriptionStart = startOfDay(
+    plan.subscriptionStart
+      ? new Date(plan.subscriptionStart)
+      : new Date(plan.createdAt),
+  );
+  const subscriptionEnd = startOfDay(
+    plan.subscriptionEnd
+      ? new Date(plan.subscriptionEnd)
+      : new Date(subscriptionStart.getTime() + 29 * MS_IN_DAY),
+  );
 
   const calendarStart = new Date(subscriptionStart);
-  calendarStart.setDate(calendarStart.getDate() - getDayOfWeek(subscriptionStart));
+  calendarStart.setDate(
+    calendarStart.getDate() - getDayOfWeek(subscriptionStart),
+  );
   const calendarEnd = new Date(subscriptionEnd);
-  calendarEnd.setDate(calendarEnd.getDate() + (6 - getDayOfWeek(subscriptionEnd)));
+  calendarEnd.setDate(
+    calendarEnd.getDate() + (6 - getDayOfWeek(subscriptionEnd)),
+  );
 
   const scheduleLookup = new Map<number, string | undefined>();
   plan.training.schedule.forEach((entry) => {
@@ -79,26 +94,36 @@ export function createMonthlyCalendar(plan: GeneratedPlan, logs: Record<string, 
   const todayStart = startOfDay(new Date());
   const todayISO = formatLocalISODate(todayStart);
 
-  const weeks: CalendarData['weeks'] = [];
+  const weeks: CalendarData["weeks"] = [];
   const daysByDate: Record<string, CalendarDaySummary> = {};
   let currentWeek: CalendarDaySummary[] = [];
 
-  for (let cursor = new Date(calendarStart); cursor <= calendarEnd; cursor.setDate(cursor.getDate() + 1)) {
+  for (
+    let cursor = new Date(calendarStart);
+    cursor <= calendarEnd;
+    cursor.setDate(cursor.getDate() + 1)
+  ) {
     const isoDate = formatLocalISODate(cursor);
-    const legacyIsoDate = cursor.toISOString().split('T')[0];
-    const inSubscription = cursor >= subscriptionStart && cursor <= subscriptionEnd;
+    const legacyIsoDate = cursor.toISOString().split("T")[0];
+    const inSubscription =
+      cursor >= subscriptionStart && cursor <= subscriptionEnd;
     const dayOfWeek = getDayOfWeek(cursor);
     const isFuture = cursor > todayStart;
-    const log = isFuture ? undefined : logs[isoDate] ?? logs[legacyIsoDate];
+    const log = isFuture ? undefined : (logs[isoDate] ?? logs[legacyIsoDate]);
     const completedWorkouts = log?.workoutsCompleted ?? [];
     const completedMeals = new Set(log?.mealsCompleted ?? []);
     const completedHabits = new Set(log?.habitsCompleted ?? []);
 
     let dayType: DayIntensity | undefined;
-    let mealsForDay: DailyNutritionPlan['meals'] = [];
+    let mealsForDay: DailyNutritionPlan["meals"] = [];
 
-    const diffFromStart = Math.floor((cursor.getTime() - subscriptionStart.getTime()) / MS_IN_DAY);
-    const rotationIndex = ((getDayOfWeek(subscriptionStart) + Math.max(diffFromStart, 0)) % 7 + 7) % 7;
+    const diffFromStart = Math.floor(
+      (cursor.getTime() - subscriptionStart.getTime()) / MS_IN_DAY,
+    );
+    const rotationIndex =
+      (((getDayOfWeek(subscriptionStart) + Math.max(diffFromStart, 0)) % 7) +
+        7) %
+      7;
 
     if (inSubscription) {
       const nutritionForDay = getNutritionForDay(
@@ -112,7 +137,11 @@ export function createMonthlyCalendar(plan: GeneratedPlan, logs: Record<string, 
     }
 
     const workoutSummary = inSubscription
-      ? buildWorkoutSummary(scheduleLookup.get(rotationIndex), sessionLookup, completedWorkouts)
+      ? buildWorkoutSummary(
+          scheduleLookup.get(rotationIndex),
+          sessionLookup,
+          completedWorkouts,
+        )
       : null;
 
     const daySummary: CalendarDaySummary = {
