@@ -21,8 +21,17 @@ function formatDate(iso: string) {
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { profile, plan, resetPlan, signOut, session, isHydrated } =
-    useAppState();
+  const {
+    profile,
+    plan,
+    resetPlan,
+    signOut,
+    session,
+    isHydrated,
+    membershipStatus,
+    membershipPeriodEnd,
+    refreshMembership,
+  } = useAppState();
   const recentSnapshots = useMemo(
     () => (plan ? plan.profileHistory.slice(-5).reverse() : []),
     [plan],
@@ -33,6 +42,9 @@ export default function ProfileScreen() {
     if (profile.goal === "gain") return "Dobitak misica";
     return "Odrzavanje";
   }, [profile]);
+  const hasActiveMembership = ["active", "trialing", "grace"].includes(
+    membershipStatus,
+  );
 
   useEffect(() => {
     if (isHydrated && !session) {
@@ -48,13 +60,21 @@ export default function ProfileScreen() {
     return (
       <View style={styles.centered}>
         <Text style={styles.emptyText}>
-          Još nema podataka. Završi onboarding da pokreneš plan.
+          {hasActiveMembership
+            ? "Još nema podataka. Završi onboarding da pokreneš plan."
+            : "Aktiviraj Whop članstvo da bi pristupila profilu i planu."}
         </Text>
         <TouchableOpacity
           style={styles.primaryButton}
-          onPress={() => router.replace("/onboarding")}
+          onPress={() =>
+            router.replace(
+              hasActiveMembership ? "/onboarding" : "/membership-required",
+            )
+          }
         >
-          <Text style={styles.primaryLabel}>Pokreni onboarding</Text>
+          <Text style={styles.primaryLabel}>
+            {hasActiveMembership ? "Pokreni onboarding" : "Aktiviraj članstvo"}
+          </Text>
         </TouchableOpacity>
       </View>
     );
@@ -65,6 +85,10 @@ export default function ProfileScreen() {
     router.replace("/onboarding");
   };
 
+  const handleMembershipManage = () => {
+    router.push("/membership-required");
+  };
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.heading}>Tvoj profil</Text>
@@ -72,6 +96,40 @@ export default function ProfileScreen() {
         Podaci su sačuvani u Supabase profilu. Možeš ih menjati ručno ili
         ponoviti onboarding u bilo kom trenutku.
       </Text>
+
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>Članstvo</Text>
+        <View style={styles.row}>
+          <Text style={styles.label}>Status</Text>
+          <Text style={styles.value}>{membershipStatus}</Text>
+        </View>
+        {membershipPeriodEnd ? (
+          <View style={styles.row}>
+            <Text style={styles.label}>Važi do</Text>
+            <Text style={styles.value}>
+              {new Date(membershipPeriodEnd).toLocaleDateString("sr-RS", {
+                day: "2-digit",
+                month: "short",
+                year: "numeric",
+              })}
+            </Text>
+          </View>
+        ) : null}
+        <View style={styles.membershipActions}>
+          <TouchableOpacity
+            style={styles.secondaryButton}
+            onPress={() => void refreshMembership()}
+          >
+            <Text style={styles.secondaryLabel}>Osveži status</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.secondaryButton}
+            onPress={handleMembershipManage}
+          >
+            <Text style={styles.secondaryLabel}>Upravljaj članstvom</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
 
       <View style={styles.buttonRow}>
         <TouchableOpacity
@@ -314,6 +372,11 @@ const styles = StyleSheet.create({
   buttonRow: {
     flexDirection: "row",
     gap: 12,
+  },
+  membershipActions: {
+    flexDirection: "row",
+    gap: 12,
+    flexWrap: "wrap",
   },
   historyItem: {
     borderRadius: 12,

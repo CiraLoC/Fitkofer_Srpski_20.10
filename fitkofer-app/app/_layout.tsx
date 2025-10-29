@@ -117,6 +117,16 @@ function RootLayoutNav() {
             }}
           />
           <Stack.Screen
+            name="membership-required"
+            options={{
+              title: "Članstvo",
+              headerTitleStyle: {
+                fontFamily: "Inter_600SemiBold",
+                fontSize: 18,
+              },
+            }}
+          />
+          <Stack.Screen
             name="profile-edit"
             options={{
               title: "Uredi profil",

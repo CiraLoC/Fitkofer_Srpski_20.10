@@ -21,7 +21,10 @@ const intensityLabels: Record<DayIntensity, string> = {
 };
 
 export default function NutritionScreen() {
-  const { plan, logs, toggleMealCompletion } = useAppState();
+  const { plan, logs, toggleMealCompletion, membershipStatus } = useAppState();
+  const hasActiveMembership = ["active", "trialing", "grace"].includes(
+    membershipStatus,
+  );
   const today = useMemo(() => new Date(), []);
   const defaultDay = ((today.getDay() + 6) % 7) as 0 | 1 | 2 | 3 | 4 | 5 | 6;
   const [selectedDay, setSelectedDay] = useState<number>(defaultDay);
@@ -79,7 +82,9 @@ export default function NutritionScreen() {
     return (
       <View style={styles.centered}>
         <Text style={styles.emptyText}>
-          Nema planirane ishrane. Generisi plan kroz onboarding.
+          {hasActiveMembership
+            ? "Nema planirane ishrane. Generiši plan kroz onboarding."
+            : "Aktiviraj Whop članstvo da bi otključala plan ishrane."}
         </Text>
       </View>
     );

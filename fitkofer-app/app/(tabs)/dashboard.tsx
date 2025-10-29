@@ -42,7 +42,11 @@ export default function DashboardScreen() {
     toggleMealCompletion,
     toggleHabitCompletion,
     setDailyEnergy,
+    membershipStatus,
   } = useAppState();
+  const hasActiveMembership = ["active", "trialing", "grace"].includes(
+    membershipStatus,
+  );
   const today = useMemo(() => new Date(), []);
   const isoDate = formatLocalISODate(today);
   const log = logs[isoDate];
@@ -51,7 +55,9 @@ export default function DashboardScreen() {
     return (
       <View style={styles.centered}>
         <Text style={styles.emptyText}>
-          Nema aktivnog plana. Prođi onboarding da kreiraš plan.
+          {hasActiveMembership
+            ? "Nema aktivnog plana. Prođi onboarding da kreiraš plan."
+            : "Aktiviraj Whop članstvo da bi otključala svoj plan i treninge."}
         </Text>
       </View>
     );

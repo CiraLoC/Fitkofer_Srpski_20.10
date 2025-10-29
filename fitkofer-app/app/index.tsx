@@ -17,8 +17,18 @@ import { supabase } from "@/lib/supabase/client";
 import { useAppState } from "@/state/AppStateContext";
 
 export default function IndexRoute() {
-  const { plan, session, isHydrated, hasCompletedOnboarding } = useAppState();
+  const {
+    plan,
+    session,
+    isHydrated,
+    hasCompletedOnboarding,
+    membershipStatus,
+  } = useAppState();
   const dashboardHref = "/(tabs)/dashboard" satisfies Href;
+  const membershipHref = "/membership-required" satisfies Href;
+  const hasActiveMembership = ["active", "trialing", "grace"].includes(
+    membershipStatus,
+  );
 
   if (!isHydrated) {
     return null;
@@ -30,6 +40,10 @@ export default function IndexRoute() {
 
   if (!hasCompletedOnboarding) {
     return <Redirect href="/onboarding" />;
+  }
+
+  if (!hasActiveMembership) {
+    return <Redirect href={membershipHref} />;
   }
 
   if (!plan) {

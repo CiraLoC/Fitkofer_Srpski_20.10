@@ -53,6 +53,8 @@ const defineConfig = ({ config }: ConfigContext): ExpoConfig => ({
     supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL,
     supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
     sentryDsn: process.env.EXPO_PUBLIC_SENTRY_DSN,
+    whopCheckoutUrl: process.env.EXPO_PUBLIC_WHOP_CHECKOUT_URL,
+    supportEmail: process.env.EXPO_PUBLIC_SUPPORT_EMAIL,
   },
 });
 

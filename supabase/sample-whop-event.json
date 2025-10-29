@@ -1,0 +1,13 @@
+﻿{
+  "id": "evt_test_001",
+  "event": "membership_activated",
+  "membership": {
+    "id": "whop_test_membership_001",
+    "status": "active",
+    "user_email": "test-member@fitkofer.com",
+    "plan_id": "plan_basic",
+    "plan_name": "Basic Plan",
+    "current_period_start": "2024-11-01T00:00:00Z",
+    "current_period_end": "2024-12-01T00:00:00Z"
+  }
+}

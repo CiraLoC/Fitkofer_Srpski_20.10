@@ -37,15 +37,24 @@ export default function PlanPreviewScreen() {
     isHydrated,
     setPlan,
     markOnboardingComplete,
+    membershipStatus,
   } = useAppState();
   const [saving, setSaving] = useState(false);
   const dashboardHref = "/(tabs)/dashboard" satisfies Href;
+  const membershipHref = "/membership-required" satisfies Href;
+  const hasActiveMembership = ["active", "trialing", "grace"].includes(
+    membershipStatus,
+  );
 
   useEffect(() => {
     if (isHydrated && !session) {
       router.replace("/auth");
+      return;
     }
-  }, [isHydrated, router, session]);
+    if (isHydrated && session && !hasActiveMembership) {
+      router.replace(membershipHref);
+    }
+  }, [hasActiveMembership, isHydrated, membershipHref, router, session]);
 
   const schedule = useMemo(() => {
     if (!plan) return [];
@@ -66,6 +75,10 @@ export default function PlanPreviewScreen() {
       router.replace("/onboarding");
       return;
     }
+    if (!hasActiveMembership) {
+      router.replace(membershipHref);
+      return;
+    }
     try {
       setSaving(true);
       if (plan.subscriptionTier !== "full") {
@@ -81,9 +94,17 @@ export default function PlanPreviewScreen() {
       setSaving(false);
       router.replace(dashboardHref);
     }
-  }, [dashboardHref, markOnboardingComplete, plan, router, setPlan]);
+  }, [
+    dashboardHref,
+    hasActiveMembership,
+    markOnboardingComplete,
+    membershipHref,
+    plan,
+    router,
+    setPlan,
+  ]);
 
-  if (!session || !plan || !profile) {
+  if (!session || !plan || !profile || !hasActiveMembership) {
     return (
       <View style={styles.centered}>
         <Text style={styles.emptyText}>

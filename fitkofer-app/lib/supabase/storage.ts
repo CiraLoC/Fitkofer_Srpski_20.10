@@ -1,5 +1,11 @@
 import { supabase } from "@/lib/supabase/client";
-import type { DailyLog, GeneratedPlan, UserProfile } from "@/types";
+import type {
+  DailyLog,
+  GeneratedPlan,
+  MembershipStatus,
+  MembershipSummary,
+  UserProfile,
+} from "@/types";
 
 type ProfileRow = {
   user_id: string;
@@ -15,6 +21,12 @@ type LogRow = {
   user_id: string;
   log_date: string;
   log: DailyLog | null;
+};
+
+type MembershipRow = {
+  status: MembershipStatus;
+  current_period_end: string | null;
+  updated_at: string | null;
 };
 
 export async function fetchProfile(userId: string) {
@@ -118,5 +130,32 @@ export async function upsertDailyLog(userId: string, log: DailyLog) {
       onConflict: "user_id,log_date",
     },
   );
+  if (error) throw error;
+}
+
+export async function fetchMembership(): Promise<MembershipSummary> {
+  const { data, error } = await supabase.rpc("get_membership_status");
+  if (error) throw error;
+  const row = (data as MembershipRow[] | null)?.[0];
+  if (!row) {
+    return {
+      status: "inactive",
+      currentPeriodEnd: null,
+      updatedAt: null,
+    };
+  }
+  return {
+    status: row.status ?? "inactive",
+    currentPeriodEnd: row.current_period_end,
+    updatedAt: row.updated_at,
+  };
+}
+
+export async function claimMembership(email: string) {
+  const trimmed = email.trim();
+  if (!trimmed) return;
+  const { error } = await supabase.rpc("claim_membership", {
+    v_email: trimmed,
+  });
   if (error) throw error;
 }

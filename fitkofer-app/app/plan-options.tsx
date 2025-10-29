@@ -46,10 +46,20 @@ const options: PlanOption[] = [
 
 export default function PlanOptionsScreen() {
   const router = useRouter();
-  const { plan, session, isHydrated, setPlan, markOnboardingComplete } =
-    useAppState();
+  const {
+    plan,
+    session,
+    isHydrated,
+    setPlan,
+    markOnboardingComplete,
+    membershipStatus,
+  } = useAppState();
   const [pendingOption, setPendingOption] = useState<OptionId | null>(null);
   const dashboardHref = "/(tabs)/dashboard" satisfies Href;
+  const membershipRequiredHref = "/membership-required" satisfies Href;
+  const hasActiveMembership = ["active", "trialing", "grace"].includes(
+    membershipStatus,
+  );
 
   useEffect(() => {
     if (!isHydrated) return;
@@ -57,15 +67,31 @@ export default function PlanOptionsScreen() {
       router.replace("/auth");
       return;
     }
+    if (!hasActiveMembership) {
+      router.replace(membershipRequiredHref);
+      return;
+    }
     if (plan && plan.subscriptionTier !== "unselected") {
       router.replace(dashboardHref);
     }
-  }, [dashboardHref, isHydrated, plan, router, session]);
+  }, [
+    dashboardHref,
+    hasActiveMembership,
+    isHydrated,
+    membershipRequiredHref,
+    plan,
+    router,
+    session,
+  ]);
 
   const handleSelect = useCallback(
     async (option: OptionId) => {
       if (!plan) {
         router.replace("/onboarding");
+        return;
+      }
+      if (!hasActiveMembership) {
+        router.replace(membershipRequiredHref);
         return;
       }
       try {
@@ -83,10 +109,18 @@ export default function PlanOptionsScreen() {
         setPendingOption(null);
       }
     },
-    [dashboardHref, markOnboardingComplete, plan, router, setPlan],
+    [
+      dashboardHref,
+      hasActiveMembership,
+      markOnboardingComplete,
+      membershipRequiredHref,
+      plan,
+      router,
+      setPlan,
+    ],
   );
 
-  if (!session || !plan) {
+  if (!session || !plan || !hasActiveMembership) {
     return null;
   }
 

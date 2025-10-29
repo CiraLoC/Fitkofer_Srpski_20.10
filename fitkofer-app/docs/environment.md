@@ -4,18 +4,28 @@ All runtime credentials are injected via environment variables. Use `.env.local`
 
 ## Variables by environment
 
-| Variable                        | Development (.env.local)            | Staging (EAS)                  | Production (EAS)                | Notes                                                   |
-| ------------------------------- | ----------------------------------- | ------------------------------ | ------------------------------- | ------------------------------------------------------- |
-| `EXPO_PUBLIC_SUPABASE_URL`      | Supabase project URL (dev)          | Supabase project URL (staging) | Supabase project URL (prod)     | Must match the Supabase instance the client should hit. |
-| `EXPO_PUBLIC_SUPABASE_ANON_KEY` | Dev anon key                        | Staging anon key               | Prod anon key                   | Regenerate via Supabase dashboard if rotated.           |
-| `EXPO_PUBLIC_SENTRY_DSN`        | Optional                            | Sentry DSN (staging project)   | Sentry DSN (production project) | Leave blank to disable remote crash capture.            |
-| `SENTRY_ORG`                    | (optional) Sentry org slug          | Sentry org slug                | Sentry org slug                 | Required for bundler symbol upload when DSN enabled.    |
-| `SENTRY_PROJECT`                | (optional) Sentry project key       | Staging project key            | Production project key          | Matches DSN project.                                    |
-| `SENTRY_URL`                    | Default (`https://sentry.io/`)      | Custom URL if self-hosted      | Custom URL if self-hosted       | Only override when using self-hosted Sentry.            |
-| `EXPO_PUBLIC_POSTHOG_KEY`       | Optional                            | PostHog project API key        | PostHog project API key         | Enables analytics capture; leave blank to disable.      |
-| `EXPO_PUBLIC_POSTHOG_HOST`      | Default (`https://app.posthog.com`) | Custom PostHog host            | Custom PostHog host             | Only set when using a self-hosted PostHog instance.     |
+| Variable                        | Development (.env.local)            | Staging (EAS)                  | Production (EAS)                | Notes                                                    |
+| ------------------------------- | ----------------------------------- | ------------------------------ | ------------------------------- | -------------------------------------------------------- |
+| `EXPO_PUBLIC_SUPABASE_URL`      | Supabase project URL (dev)          | Supabase project URL (staging) | Supabase project URL (prod)     | Must match the Supabase instance the client should hit.  |
+| `EXPO_PUBLIC_SUPABASE_ANON_KEY` | Dev anon key                        | Staging anon key               | Prod anon key                   | Regenerate via Supabase dashboard if rotated.            |
+| `EXPO_PUBLIC_SENTRY_DSN`        | Optional                            | Sentry DSN (staging project)   | Sentry DSN (production project) | Leave blank to disable remote crash capture.             |
+| `SENTRY_ORG`                    | (optional) Sentry org slug          | Sentry org slug                | Sentry org slug                 | Required for bundler symbol upload when DSN enabled.     |
+| `SENTRY_PROJECT`                | (optional) Sentry project key       | Staging project key            | Production project key          | Matches DSN project.                                     |
+| `SENTRY_URL`                    | Default (`https://sentry.io/`)      | Custom URL if self-hosted      | Custom URL if self-hosted       | Only override when using self-hosted Sentry.             |
+| `EXPO_PUBLIC_POSTHOG_KEY`       | Optional                            | PostHog project API key        | PostHog project API key         | Enables analytics capture; leave blank to disable.       |
+| `EXPO_PUBLIC_POSTHOG_HOST`      | Default (`https://app.posthog.com`) | Custom PostHog host            | Custom PostHog host             | Only set when using a self-hosted PostHog instance.      |
+| `EXPO_PUBLIC_WHOP_CHECKOUT_URL` | Whop checkout URL for testing       | Whop checkout URL              | Production Whop checkout URL    | Opened when users need to activate membership.           |
+| `EXPO_PUBLIC_SUPPORT_EMAIL`     | Optional support email              | Support email                  | Support email                   | Shown in membership help links (fallback text if empty). |
 
 > Tip: keep `.env.local` out of source control. The repo already ignores `.env*`.
+
+### Server-side / tooling secrets
+
+These are not consumed by the Expo client, but you will need them when configuring webhooks or running scripts:
+
+- `WHOP_WEBHOOK_SECRET` – set in Supabase Edge Function (`whop-webhook`) environment to verify incoming Whop events.
+- `SUPABASE_SERVICE_ROLE_KEY` – required locally when running `npm run seed:content`; never embed this in the client.
+- `SUPABASE_SERVICE_URL` – same as `EXPO_PUBLIC_SUPABASE_URL`, used alongside the service key for scripts.
 
 ## Fetching secrets from the vault
 

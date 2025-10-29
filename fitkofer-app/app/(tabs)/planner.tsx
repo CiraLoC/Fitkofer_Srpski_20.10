@@ -44,7 +44,10 @@ function formatHabitLabel(habit: {
 }
 
 export default function PlannerScreen() {
-  const { plan, monthlyCalendar } = useAppState();
+  const { plan, monthlyCalendar, membershipStatus } = useAppState();
+  const hasActiveMembership = ["active", "trialing", "grace"].includes(
+    membershipStatus,
+  );
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const subscriptionStart = plan?.subscriptionStart ?? plan?.createdAt ?? "";
   const subscriptionEnd = plan?.subscriptionEnd ?? plan?.createdAt ?? "";
@@ -69,7 +72,11 @@ export default function PlannerScreen() {
   if (!plan || !monthlyCalendar) {
     return (
       <View style={styles.centered}>
-        <Text style={styles.emptyText}>Plan još nije generisan.</Text>
+        <Text style={styles.emptyText}>
+          {hasActiveMembership
+            ? "Plan još nije generisan."
+            : "Aktiviraj Whop članstvo da bi otključala planer i navike."}
+        </Text>
       </View>
     );
   }

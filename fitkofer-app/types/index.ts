@@ -17,6 +17,21 @@ export type PlanSubscriptionTier =
   | "training"
   | "habits"
   | "full";
+export type MembershipStatus =
+  | "unknown"
+  | "inactive"
+  | "active"
+  | "trialing"
+  | "grace"
+  | "past_due"
+  | "canceled"
+  | "expired";
+
+export interface MembershipSummary {
+  status: MembershipStatus;
+  currentPeriodEnd?: string | null;
+  updatedAt?: string | null;
+}
 
 export type HealthCondition = "IR" | "Hashimoto" | "PCOS";
 
@@ -212,6 +227,7 @@ export interface AppState {
   profile: UserProfile | null;
   plan: GeneratedPlan | null;
   logs: Record<string, DailyLog>;
+  membership?: MembershipSummary | null;
 }
 
 export type SyncStatus = "idle" | "syncing" | "error";
@@ -226,6 +242,7 @@ export interface AppActions {
   setDailyEnergy: (date: string, level: StressLevel) => Promise<void>;
   signOut: () => Promise<void>;
   markOnboardingComplete: () => Promise<void>;
+  refreshMembership: () => Promise<void>;
 }
 
 export interface AppStateMeta {
@@ -234,6 +251,8 @@ export interface AppStateMeta {
   lastError?: string | null;
   hasCompletedOnboarding: boolean;
   monthlyCalendar: CalendarData | null;
+  membershipStatus: MembershipStatus;
+  membershipPeriodEnd?: string | null;
 }
 
 export interface AppAuthState {

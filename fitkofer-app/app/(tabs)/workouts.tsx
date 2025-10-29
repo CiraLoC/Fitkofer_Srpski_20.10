@@ -21,14 +21,19 @@ const dayLabels = [
 ];
 
 export default function WorkoutsScreen() {
-  const { plan } = useAppState();
+  const { plan, membershipStatus } = useAppState();
+  const hasActiveMembership = ["active", "trialing", "grace"].includes(
+    membershipStatus,
+  );
   const [expandedSession, setExpandedSession] = useState<string | null>(null);
 
   if (!plan) {
     return (
       <View style={styles.centered}>
         <Text style={styles.emptyText}>
-          Generiši plan da bi videla treninge.
+          {hasActiveMembership
+            ? "Generiši plan da bi videla treninge."
+            : "Aktiviraj Whop članstvo da bi otključala trening plan."}
         </Text>
       </View>
     );

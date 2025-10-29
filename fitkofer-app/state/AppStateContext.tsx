@@ -19,6 +19,8 @@ import type {
   AppStateContextValue,
   DailyLog,
   GeneratedPlan,
+  MembershipStatus,
+  MembershipSummary,
   PlanSubscriptionTier,
   SyncStatus,
   StressLevel,
@@ -31,6 +33,8 @@ import {
   fetchLogs,
   fetchPlan,
   fetchProfile,
+  fetchMembership,
+  claimMembership,
   upsertDailyLog,
   upsertPlan,
   upsertProfile,
@@ -45,17 +49,28 @@ const initialState: AppState = {
   profile: null,
   plan: null,
   logs: {},
+  membership: null,
 };
 
 const ONBOARDING_FLAG_BASE = "fitkofer:onboardingCompleted";
 const MS_IN_DAY = 1000 * 60 * 60 * 24;
+const ACTIVE_MEMBERSHIP_STATUSES: MembershipStatus[] = [
+  "active",
+  "trialing",
+  "grace",
+];
+
+function isMembershipActive(status: MembershipStatus) {
+  return ACTIVE_MEMBERSHIP_STATUSES.includes(status);
+}
 
 type Action =
   | { type: "SET_PROFILE"; payload: UserProfile }
   | { type: "SET_PLAN"; payload: GeneratedPlan }
   | { type: "RESET" }
   | { type: "UPSERT_LOG"; payload: DailyLog }
-  | { type: "HYDRATE"; payload: AppState };
+  | { type: "HYDRATE"; payload: AppState }
+  | { type: "SET_MEMBERSHIP"; payload: MembershipSummary | null };
 
 function reducer(state: AppState, action: Action): AppState {
   switch (action.type) {
@@ -75,7 +90,14 @@ function reducer(state: AppState, action: Action): AppState {
       };
     }
     case "HYDRATE":
-      return action.payload;
+      return {
+        profile: action.payload.profile,
+        plan: action.payload.plan,
+        logs: action.payload.logs,
+        membership: action.payload.membership ?? null,
+      };
+    case "SET_MEMBERSHIP":
+      return { ...state, membership: action.payload };
     default:
       return state;
   }
@@ -151,12 +173,29 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const userIdRef = useRef<string | null>(null);
   const onboardingKeyRef = useRef<string | null>(null);
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(false);
+  const [membershipStatus, setMembershipStatus] =
+    useState<MembershipStatus>("unknown");
+  const [membershipPeriodEnd, setMembershipPeriodEnd] = useState<string | null>(
+    null,
+  );
+  const membershipStatusRef = useRef<MembershipStatus>("unknown");
 
   const handleError = useCallback((error: unknown) => {
     console.error("[AppState] Supabase sync error", error);
     setSyncStatus("error");
     setLastError(error instanceof Error ? error.message : String(error));
   }, []);
+
+  const updateMembership = useCallback(
+    (summary: MembershipSummary | null) => {
+      const status = summary?.status ?? "inactive";
+      setMembershipStatus(status);
+      setMembershipPeriodEnd(summary?.currentPeriodEnd ?? null);
+      membershipStatusRef.current = status;
+      dispatch({ type: "SET_MEMBERSHIP", payload: summary });
+    },
+    [dispatch],
+  );
 
   const hydrate = useCallback(
     async (session: Session | null) => {
@@ -169,6 +208,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       if (!session?.user) {
         dispatch({ type: "RESET" });
         setHasCompletedOnboarding(false);
+        updateMembership(null);
         setIsHydrated(true);
         return;
       }
@@ -184,28 +224,61 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       }
       setHasCompletedOnboarding(storedFlag);
 
+      if (session.user.email) {
+        try {
+          await claimMembership(session.user.email);
+        } catch (claimError) {
+          console.warn("[AppState] Failed to claim membership", claimError);
+        }
+      }
+
+      let membershipSummary: MembershipSummary = {
+        status: "inactive",
+        currentPeriodEnd: null,
+        updatedAt: null,
+      };
+      try {
+        membershipSummary = await fetchMembership();
+      } catch (membershipError) {
+        console.warn("[AppState] Failed to fetch membership", membershipError);
+      }
+      updateMembership(membershipSummary);
+      const membershipIsActive = isMembershipActive(membershipSummary.status);
+
       setSyncStatus("syncing");
       try {
-        const [profileResult, planResult, logs] = await Promise.all([
-          fetchProfile(session.user.id),
-          fetchPlan(session.user.id),
-          fetchLogs(session.user.id),
+        const profilePromise = fetchProfile(session.user.id);
+        const planPromise = membershipIsActive
+          ? fetchPlan(session.user.id)
+          : Promise.resolve(null);
+        const logsPromise = membershipIsActive
+          ? fetchLogs(session.user.id)
+          : Promise.resolve<Record<string, DailyLog>>({});
+
+        const [profileResult, planResult, logsResult] = await Promise.all([
+          profilePromise,
+          planPromise,
+          logsPromise,
         ]);
 
         const fetchedProfile = profileResult ?? null;
-        const normalizedPlan = normalizePlan(planResult, fetchedProfile);
+        const normalizedPlan = membershipIsActive
+          ? normalizePlan(planResult, fetchedProfile)
+          : null;
 
         dispatch({
           type: "HYDRATE",
           payload: {
             profile: fetchedProfile,
             plan: normalizedPlan,
-            logs,
+            logs: (logsResult as Record<string, DailyLog>) ?? {},
+            membership: membershipSummary,
           },
         });
         setLastError(null);
 
-        const completed = Boolean(normalizedPlan) || storedFlag;
+        const completed =
+          membershipIsActive && (Boolean(normalizedPlan) || storedFlag);
         setHasCompletedOnboarding(completed);
         if (completed && onboardingKeyRef.current) {
           try {
@@ -224,7 +297,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         setSyncStatus("idle");
       }
     },
-    [handleError],
+    [handleError, updateMembership],
   );
 
   useEffect(() => {
@@ -280,6 +353,14 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     [handleError],
   );
 
+  const membershipGuard = useCallback(() => {
+    const active = isMembershipActive(membershipStatusRef.current);
+    if (!active) {
+      setLastError("Potrebna je aktivna Whop pretplata za ovu akciju.");
+    }
+    return active;
+  }, []);
+
   const actions: AppActions = useMemo(
     () => ({
       async setProfile(profile: UserProfile) {
@@ -295,6 +376,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         });
       },
       async setPlan(plan: GeneratedPlan) {
+        if (!membershipGuard()) return;
         dispatch({ type: "SET_PLAN", payload: plan });
         await withSync(async () => {
           const userId = userIdRef.current;
@@ -309,6 +391,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         });
       },
       async resetPlan() {
+        if (!membershipGuard()) return;
         dispatch({ type: "RESET" });
         await withSync(async () => {
           const userId = userIdRef.current;
@@ -330,6 +413,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         void trackEvent("plan_reset");
       },
       async toggleWorkoutCompletion(date: string, workoutId: string) {
+        if (!membershipGuard()) return;
         const log = ensureLog(state.logs, date);
         const exists = log.workoutsCompleted.includes(workoutId);
         const workoutsCompleted = exists
@@ -352,6 +436,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         });
       },
       async toggleMealCompletion(date: string, mealId: string) {
+        if (!membershipGuard()) return;
         const log = ensureLog(state.logs, date);
         const exists = log.mealsCompleted.includes(mealId);
         const mealsCompleted = exists
@@ -374,6 +459,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         });
       },
       async toggleHabitCompletion(date: string, habitId: string) {
+        if (!membershipGuard()) return;
         const log = ensureLog(state.logs, date);
         const exists = log.habitsCompleted.includes(habitId);
         const habitsCompleted = exists
@@ -396,6 +482,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         });
       },
       async setDailyEnergy(date: string, level: StressLevel) {
+        if (!membershipGuard()) return;
         const log = ensureLog(state.logs, date);
         const nextLog = { ...log, energy: level };
         dispatch({
@@ -445,8 +532,11 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         onboardingKeyRef.current = null;
         void trackEvent("user_signed_out");
       },
+      async refreshMembership() {
+        await hydrate(session);
+      },
     }),
-    [state.logs, withSync],
+    [hydrate, membershipGuard, session, state.logs, withSync],
   );
 
   const monthlyCalendar = useMemo(() => {
@@ -464,6 +554,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       hasCompletedOnboarding,
       monthlyCalendar,
       session,
+      membershipStatus,
+      membershipPeriodEnd,
     }),
     [
       actions,
@@ -471,6 +563,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       isHydrated,
       lastError,
       monthlyCalendar,
+      membershipPeriodEnd,
+      membershipStatus,
       session,
       state,
       syncStatus,
