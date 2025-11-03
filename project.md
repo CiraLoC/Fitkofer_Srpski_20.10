@@ -1,353 +1,234 @@
-# Fitkofer — MVP PRD (for Serbian market)
+# Fitkofer Product Blueprint (Serbian Market)
 
-Version: 1.0  
-Owner: Marko (solo founder)  
-Audience: engineers, designer, content ops  
-Language in‑app: **Serbian (latinica)**  
-Platforms: iOS + Android (one codebase), responsive web later
-
----
-
-## 1) Product vision
-Enable women in Serbia to achieve sustainable body recomposition and wellbeing through a single app that generates **personalized training**, **calorie‑rotation meal plans**, and **daily habits** based on onboarding inputs. Keep it simple, automated, and accountable.
-
-**North‑star metric:** 4‑week plan adherence ≥60% for active users.
+Version: 1.2 (updated after Whop integration)
+Owner: Marko (solo founder)
+Audience: product, engineering, content, operations
+App language: Serbian (latinica)
+Platforms: Expo (iOS, Android). Responsive web planned after mobile launch.
 
 ---
 
-## 2) Target users
-- Women 18–45, beginners to intermediate.  
-- Two primary contexts: (A) home workouts (bez opreme, trake, bučice), (B) gym access.  
-- Constraints: busy schedule, past diet failures, potential conditions: IR, Hashimoto, PCOS.
+## 1. Product Vision
 
-**Personas**  
-1) *Zauzeta mama (31)* — 3x nedeljno, kućni treninzi, želi smanjenje masti.  
-2) *Studentkinja (22)* — 4x nedeljno, teretana, želi oblikovanje tela.  
-3) *IT zaposlena (28)* — stres, loš san; traži strukturu, NSDR i disanje.
+Fitkofer helps women in Serbia achieve sustainable recomposition and wellbeing through one guided program that adapts training, nutrition, and daily habits to their context. The product must feel premium, reliable, and simple for a non-technical solo founder to operate.
+
+**North-star metric:** percent of paying members who complete 60%+ of prescribed workouts, meals, and habits during a four-week block.
+
+**End goal:** Launch Fitkofer as a gated membership product on Whop with automated onboarding, personalized plans, and daily accountability accessible from the app.
 
 ---
 
-## 3) Brand + UI baseline
-Use provided assets as visual source. Style: warm terracotta + neutral bež/siva; solid black for text.
+## 2. Target Users and Personas
 
-**Palette (proposal):**  
-- Terracotta: `#AF4D49`  
-- Sand: `#EADFCF`  
-- Olive: `#7E8B6A`  
-- Charcoal: `#232323`  
-- Cream: `#FDF8F2`
+- Women 18–45, beginners to intermediate, living in Serbia.
+- Two main contexts: home workouts (minimal equipment) and gym access.
+- Common constraints: limited time, metabolic conditions (IR, Hashimoto, PCOS), stress and sleep issues.
 
-**Typography:**  
-- Headings: Playfair Display or DM Serif Display.  
-- Body/UI: Inter or SF Pro.  
-
-**Tone:** direktno, motivišuće, bez floskula.
+**Core personas**
+1. **Busy mom (31)** – trains at home 3x per week, wants fat loss without burnout.
+2. **Student (22)** – mixes gym and dorm cooking, focuses on shaping muscles.
+3. **IT professional (28)** – high stress, wants structure with breathing/NSDR support.
 
 ---
 
-## 4) MVP scope (buildable by solo founder)
-**Included**
-1. **Onboarding** questionnaire → profile + constraints.  
-2. **Plan generator**  
-   - Training plan (home/gym variants) with linear progression.  
-   - Calorie rotation (low/mid/high) per week + makroi + primeri obroka.  
-3. **Dashboard** with adherence % and energija.  
-4. **Daily tracker**: planer zadataka, obroci, treninzi, navike; podsjetnici.  
-5. **Content**: recepti, liste za kupovinu, kratki vodiči za san, stres, disanje i NSDR.  
-6. **Auth + subscription** (mesecna i godišnja) + paywall.  
-7. **Basic integrations**: Apple Health/Google Fit (koraci, energija potrošnja – read‑only).  
+## 3. Current Product Snapshot (October 2025)
 
-**Excluded (post‑MVP)**  
-- Wearable deep integration, community feed, chat, AI coach chat, advanced period tracking.
+### Delivered in Phase 1
+- Supabase schema for profiles, plans, daily logs with row-level security.
+- Onboarding flow that captures profile data and generates personalized training/nutrition plan.
+- Daily log storage (workouts, meals, habits) with log_date fix applied.
+- Content seeding scripts for exercises, meals, and habits.
+- App UX in Serbian, including dashboard, planner, plan preview, profile management.
 
----
+### Delivered in Phase 2
+- Whop membership schema and RLS gating across plans/logs.
+- Edge Function `whop-webhook` that verifies Whop events, writes membership rows, and links users by email.
+- Client-side membership checks (redirect to membership-required screen, claim_membership RPC, status refresh button, sign-out escape).
+- Manual operations guide for Supabase secrets, Whop webhook setup, and seed scripts.
 
-## 5) System architecture (suggested stack)
-- **Client:** React Native (Expo), TypeScript.  
-- **Backend:** Supabase (Postgres + Auth + Storage + Edge Functions) 
-- **Payments:** RevenueCat (iOS/Android subscriptions) + Stripe for web.  
-- **Push:** Expo Notifications.  
-- **Analytics:** PostHog or Firebase Analytics.  
-- **CMS:** Supabase tables (recipes, exercises, habits) with row‑level versioning.
+### Outstanding for Phase 2 sign-off
+- Confirm Whop membership row always binds to Supabase user_id (now available via claim_membership).
+- End-to-end QA for multiple membership lifecycles: went_valid, canceled, expired, past_due.
+- Finalize membership-required copy and support link once support email is confirmed.
 
 ---
 
-## 6) Core user flows
+## 4. Experience Flow (live product)
 
-### 6.1 Onboarding → plan generation
-1. User installs → language fixed to sr‑lat.  
-2. Create account (email + lozinka, Apple/Google later).  
-3. **Questionnaire**: starost, visina, težina, cilj (gubitak/održavanje/dobitak), nivo aktivnosti, zdravstvena stanja (IR/Hashimoto/PCOS), oprema (kuća/teretana + dostupno), dani u nedelji (2–5), ishrana preferencije (meso/riba/vegetarijan/kombinovano), alergije, nevoljeni sastojci, spavanje, stres, ciklus info (opciono).  
-4. App generiše: kalorije, makroi, raspored **Low/Mid/High** dana po nedeljama, trening split i progresiju, osnovne navike.  
-5. Prikaz **Plan pregleda** i početak.
+1. **Activation via Whop**
+   - Prospect purchases the Fitkofer product on Whop (web checkout).
+   - Whop sends membership webhook to Supabase Edge Function, setting status active/trialing.
 
-### 6.2 Dnevna upotreba
-- Dashboard: današnji plan, napredak, energija, adherence bar.  
-- Ticking: trening urađen, obroci zabeleženi, voda, san, šetnja, disanje.  
-- Podsjetnici: push po rasporedu.  
-- Nedeljni update: automatski prilagodi težine i kalorije po adherenci i merenjima.
+2. **Account creation in the app**
+   - User signs up with email/password (must match Whop email for instant unlock).
+   - App calls `claim_membership(email)` to attach the Supabase auth user to the membership row.
 
----
+3. **Onboarding questionnaire**
+   - Required inputs: age, height, weight, goal, activity level, equipment location & items, training frequency, diet preference.
+   - Optional inputs: allergies, disliked foods, health conditions, sleep hours, stress level, menstrual cycle info.
 
-## 7) Features + acceptance criteria
+4. **Plan generation**
+   - Training plan algorithm selects suitable split (2–5 days) with structured progression.
+   - Nutrition plan generates calorie-rotation (low/mid/high days) with macronutrient targets and meal templates.
+   - Habits plan surfaces daily focus items (water, sleep hygiene, NSDR, steps).
 
-### 7.1 Onboarding
-**Fields**  
-- `age`, `height_cm`, `weight_kg`, `goal`, `activity_level`, `health_conditions[]`, `equipment_home[]` or `gym_access`, `days_per_week`, `diet_pref`, `allergies[]`, `disliked[]`, `sleep_hours`, `stress_level`.
+5. **Daily usage**
+   - Dashboard shows today’s workouts, meals, habits, and adherence score.
+   - Planner tab displays monthly calendar with scheduled workouts and habit streaks.
+   - Workout/Nutrition tabs constrain access when membership status drops below active/trialing/grace.
+   - Profile screen provides membership status, plan snapshots, and onboarding redo/reset.
 
-**Rules**  
-- Required: age, height, weight, goal, activity, equipment/gym, days_per_week.  
-- Health conditions drive nutrition rules below.  
-- Save profile and snapshot inputs.
-
-**Acceptance**  
-- Submitting valid form creates `user_profile` and enqueues `plan_generate` job within 1s.  
-- Error messages in sr‑lat.
-
-### 7.2 Training plan generator
-**Inputs:** days_per_week (2–5), location (home/gym), available equipment, level (deduced from activity + strength questionnaire 3 pitanja).  
-**Algorithm:**  
-- Choose a split:
-  - 2 dana: Full Body A/B.  
-  - 3 dana: Upper/Lower/Full.  
-  - 4 dana: Upper/Lower x2.  
-  - 5 dana: Push/Pull/Legs/Upper/Lower.  
-- Each workout: 6–8 vežbi, 2–4 serije, rep‑range po cilju.  
-- Progression: **double‑progression**. Ako korisnik na sve serije ispuni gornju granicu ponavljanja u 2 uzastopne nedelje → +2.5–5% težine (ili +1–2 ponavljanja kod kuće). Deload auto na 4. nedelji ako RPE>9 prijavljen ili adherence<50%.
-
-**Acceptance:**  
-- Plan renderuje za 4 nedelje sa progresijom.  
-- Svaka vežba ima video/GIF, opis, alternativu za kuću.  
-- "Mark as done" po seriji ili po vežbi.
-
-### 7.3 Nutrition plan generator (calorie rotation)
-**Inputs:** goal, weight, height, age, sex=female, activity_level, health_conditions.  
-**Calorie calc:** Mifflin‑St Jeor → TDEE → deficit/maintenance/surplus.  
-- Deficit: −15% do −25% po profilu.  
-- Surplus: +10%.  
-**Rotation weekly template (default 3‑day training):** `H M L M H L M` (adjust by training days).  
-- `High` = TDEE or Deficit+0 to −5%.  
-- `Mid` = High − 15%.  
-- `Low` = High − 30%.  
-**Macros:** protein 1.6–2.0 g/kg, fat 0.8 g/kg min, ostatak carbs.  
-**Conditions rules:**  
-- **IR/PCOS:** carbs 35–45% na High dan, niže na Low; fokus vlakna i proteini; vremenska distribucija carbs oko treninga.  
-- **Hashimoto:** doda se preporuka za selen, jod oprez, vlakna; bez tvrde restrikcije.  
-**Meal plan:** 3–4 obroka + 1 užina; swap sistem po preferenciji.  
-**Grocery list:** generiši iz izabranih recepata za 7 dana.
-
-**Acceptance:**  
-- Generisano 7‑dnevno nedeljno meni + rotacija za 4 nedelje.  
-- Svaki obrok ima kalorije + makroe.  
-- Zamena radi unutar iste kalorijske kategorije.  
-- Lista kupovine grupisana po kategorijama.
-
-### 7.4 Habits & wellbeing
-**Defaults:** voda 2L, 7–8h sna, 7k–10k koraka, 5‑min NSDR ili vođeno disanje, 10‑min šetnja posle obroka.  
-**Tracking:** toggle + kratki edukativni kartice.
-
-**Acceptance:**  
-- Dnevni habit check + push podsjetnik.  
-- NSDR audio 5/10/20 min lokalni fajlovi.
-
-### 7.5 Dashboard
-Widgets:  
-- **Danas:** trening, obroci, navike.  
-- **Adherence %**: poslednjih 7/28 dana.  
-- **Energija**: skala 1–5 dnevno.  
-- **Telesne mere**: težina, struk, kuk.
-
-**Acceptance:**  
-- Sve metrike se računaju klijentski sa serverskim zapisom.  
-- Nedeljni email/push sa sumarnim pregledom.
-
-### 7.6 Daily tracker & planner
-- Dnevni kalendar sa time‑slots (po 30/60 min) za trening, pripremu obroka, san.  
-- Custom taskovi sa podsjetnikom.  
-- Premeštanje drag‑and‑drop (client‑side).
-
-**Acceptance:**  
-- Kreiranje, edit, done, snooze; lokalna notifikacija + push.
-
-### 7.7 Subscriptions & paywall
-- Free: onboarding + sample day + 3 recepta + 1 trening.  
-- Pro: svi planovi, liste, tracker, audio; 7‑day trial.  
-- Cene definisaće se u RSD u store‑ovima.
-
-**Acceptance:**  
-- RevenueCat entitlements gate all Pro features.  
-- Grace period i restore purchase rade.
+6. **Membership lifecycle**
+   - Webhook updates membership status on Whop events (went_valid, deactivated, expired, payment issues).
+   - App reacts to status changes: if membership becomes inactive, access is revoked and user is routed to membership-required screen.
 
 ---
 
-## 8) Data model (Postgres sketch)
-```
-users(id, email, created_at)
-profiles(user_id FK, age, height_cm, weight_kg, goal, activity_level, diet_pref, sleep_hours, stress_level, created_at)
-health_conditions(user_id, condition ENUM['IR','Hashimoto','PCOS','None'])
-plans(id, user_id, start_date, type ENUM['training','nutrition','habits'], version, data JSONB)
-workouts(plan_id, day_index, name, location ENUM['home','gym'])
-exercises(id, slug, name, equipment_tags[], video_url)
-workout_sets(workout_id, exercise_id, order, sets, reps_min, reps_max, rpe_target, weight_kg)
-meal_days(plan_id, day_index, calorie_band ENUM['Low','Mid','High'], calories, protein_g, fat_g, carbs_g)
-meals(meal_day_id, order, name, calories, protein_g, fat_g, carbs_g, recipe_id)
-recipes(id, name, tags[], ingredients JSONB, steps JSONB, calories, macros JSONB)
-grocery_items(meal_day_id, category, name, qty, unit)
-habits(plan_id, key, title, target, unit)
-checkins(user_id, date, weight_kg, waist_cm, hips_cm, energy_1_5, steps)
-completions(user_id, date, type ENUM['workout','meal','habit'], ref_id, status)
-reminders(id, user_id, title, datetime, repeat_rule)
-notifications(id, user_id, type, payload JSONB, delivered_at)
-subscriptions(user_id, status, product_id, trial_end)
+## 5. Functional Requirements
+
+### 5.1 Authentication & Membership Gating
+- Email/password auth via Supabase; magic links for recovery (pending).
+- Membership status retrieved through `get_membership_status` RPC.
+- App must display membership-required screen when status is not active/trialing/grace or current_period_end has passed.
+- Membership screen includes checkout link, refresh, support contact, and explicit sign-out.
+- Daily plan access, plan generation, and log writes are allowed only for active members (enforced by RLS).
+
+### 5.2 Onboarding & Plan Generation
+- Onboarding form validation in Serbian copy; prevents invalid ranges (13 ≤ age ≤ 100, etc.).
+- Plan generator stores JSON snapshots in `user_plans` table with subscription tier, start/end dates, profile history.
+- Generated plan includes:
+  - Weekly workout schedule for selected frequency.
+  - Daily meal structure with calorie targets and sample meals.
+  - Habit checklist aligned to user constraints.
+
+### 5.3 Daily Logs & Tracking
+- `daily_logs` table stores per-day JSON payload plus extracted columns (energy, workouts_completed, etc.).
+- App actions (mark workout/meal/habit, set energy level) update Supabase immediately.
+- Reset plan clears user_plans and user_profiles, and removes relevant logs.
+
+### 5.4 Content Management
+- Exercises, recipes, and habits stored in Supabase tables seeded from JSON.
+- Content shipping script `npm run seed:content` (requires `.env.local` with service role).
+- Future roadmap: admin interface or simple Supabase dashboard updates.
+
+---
+
+## 6. Technical Architecture
+
+- **Client:** Expo React Native (TypeScript), using expo-router navigation and AsyncStorage for local flags.
+- **State:** Custom AppState context wrapping Supabase client, handles hydration, membership refresh, logging actions.
+- **Backend:** Supabase Postgres with Row Level Security, edge functions for webhooks, SQL for plan/membership logic.
+- **Integrations:**
+  - Supabase Edge Function `whop-webhook` (no JWT verification, uses HMAC signature).
+  - Whop membership product (checkout URL stored in env, webhook secret stored as Supabase secret).
+  - Planned: Expo Notifications, HealthKit/Google Fit read-only (Phase 3).
+- **Analytics:** Placeholder analytics module; actual provider (PostHog/Firebase) to be wired in Phase 3.
+
+---
+
+## 7. Environment & Operations
+
+### 7.1 Environment Variables (client)
+- `EXPO_PUBLIC_SUPABASE_URL`
+- `EXPO_PUBLIC_SUPABASE_ANON_KEY`
+- `EXPO_PUBLIC_WHOP_CHECKOUT_URL`
+- `EXPO_PUBLIC_SUPPORT_EMAIL`
+- (Optional) analytics/crash reporting keys
+
+### 7.2 Supabase Secrets (edge runtime)
+- `SUPABASE_URL`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `WHOP_WEBHOOK_SECRET`
+
+### 7.3 Deploying the webhook
+```powershell
+cd C:\PythonProjects\Fitkofer_Srpski_20.10\supabase
+supabase functions deploy whop-webhook --project-ref mfxbbntyyubyixymugfi
 ```
 
----
-
-## 9) Personalization logic (pseudo)
-```
-BMR = 10*kg + 6.25*cm - 5*age - 161
-TDEE = BMR * activity_factor
-High = goal=='loss' ? TDEE*(1 - deficit_pct_high) : TDEE*(1 + surplus_pct)
-Mid  = High * 0.85
-Low  = High * 0.70
-Protein = clamp(1.6*kg, 90, 160)
-Fat_min = max(0.8*kg, 40)
-Carbs = (Calories - Protein*4 - Fat_min*9)/4
-Rotation = mapTrainingDaysToBands(daysPerWeek)
-```
-**IR/PCOS modifiers:** prefer carbs around workout; add fiber goal 25–35g; avoid added sugar in recipes.  
-**Hashimoto:** show note on selen rica hrana, tempo gubitka ≤0.7% tež/wk.
+### 7.4 Manual QA checklist after each deployment
+- Fire a real Whop checkout (or resend event) → status should become active in `whop_memberships`.
+- Log into app with same email → tap “Osvezi status” → membership_required screen disappears.
+- Complete onboarding → `user_profiles`, `user_plans`, `daily_logs` rows appear.
+- Sign out and back in → dashboard loads with today’s plan.
+- Cancel membership on Whop → webhook sets status canceled → app routes to membership-required screen.
 
 ---
 
-## 10) Gamification
-- Streaks (dani sa ≥1 trening + 2 navike).  
-- Badges: "Prva nedelja završena", "10 treninga", "100% adherence nedelja".  
-- Weekly challenge: 35k koraka + 3 treninga.
+## 8. Roadmap and Phases
+
+### Phase 1 (Complete)
+- App onboarding, plan generation, daily tracker, Supabase schema, RLS for core tables.
+- Content seed and log_date fix.
+
+### Phase 2 (In progress; targeted for Whop launch readiness)
+1. Whop membership wiring (DONE)
+2. Membership QA & error handling (ongoing)
+3. Support/operational docs (in project wiki)
+4. Pre-launch checklist: seed production content, finalize copy, smoke tests on iOS/Android builds
+
+### Phase 3 (Product completion)
+- Analytics & crash reporting (decide provider, add minimal events already listed in Section 10).
+- Notifications (daily reminders, onboarding nudges).
+- Health data import (optional read-only step count/energy).
+- Lightweight CMS option for editing recipes/exercises.
+
+### Phase 4 (Quality & Launch Ops)
+- Beta with 5–10 early members, gather adherence data.
+- Marketing site & checkout funnel optimization (Whop landing, email automation).
+- Prepare ASO for App Store/Play Store if moving beyond Whop distribution.
 
 ---
 
-## 11) Analytics events (PostHog/Firebase)
-- `onboarding_completed`  
-- `plan_generated` {days, location}  
-- `workout_completed` {workout_id, duration_min}  
-- `meal_swapped` {from,to}  
-- `habit_checked` {key}  
-- `reminder_fired` {type}  
-- `subscription_start/renew/cancel`
+## 9. Analytics & Telemetry (planned)
+
+Events to capture once analytics provider is selected:
+- `onboarding_started`, `onboarding_completed`
+- `plan_generated` (days_per_week, location)
+- `membership_refresh` (status, source=webhook|app)
+- `workout_completed`, `meal_logged`, `habit_checked`
+- `energy_logged`
+- `membership_status_change` (old_status, new_status)
+- `plan_reset`
+
+Crash reporting: prefer Sentry or Expo Crash Reporting; scope to be defined before Phase 3.
 
 ---
 
-## 12) Security & privacy
-- GDPR‑like: privacy policy in‑app; export/delete account.  
-- PII in Auth, health data in Postgres with RLS; at‑rest encryption via provider.  
-- No medical advice; disclaimers mandatory.
+## 10. Success Metrics
+
+- D7 activation: ≥40% of new members complete at least 1 workout + 3 habits + 1 day of meal logging.
+- Four-week adherence: ≥60% tasks completed for paying members.
+- Monthly retention: ≥25% of members remain active after month one.
+- Webhook reliability: ≥99% of Whop events processed within 30 seconds (monitored via Supabase function logs).
 
 ---
 
-## 13) Copy — Serbian (UI strings)
-- CTA: **"Započni promenu"**  
-- Onboarding steps: **"O tebi"**, **"Ciljevi"**, **"Ishrana"**, **"Oprema"**, **"Raspored"**.  
-- Dashboard: **"Današnji plan"**, **"Uspešnost"**, **"Energija"**, **"Mere"**.  
-- Habits: **"Voda"**, **"San"**, **"Šetnja"**, **"NSDR/Disanje"**.  
-- Buttons: **"Označi kao završeno"**, **"Zameni obrok"**, **"Sačuvaj"**, **"Podeli listu za kupovinu"**.  
-- Paywall: **"Otključaj Fitkofer Pro"** — **"7 dana probno"**.
+## 11. Open Questions & Decisions Needed
+
+1. **Checkout positioning:** confirm Whop product copy and ensure app CTA matches.
+2. **Support operations:** finalize support email SLA and escalation flow.
+3. **Analytics provider:** choose PostHog vs Firebase vs Mixpanel before Phase 3.
+4. **Plan adjustments:** decide whether members can regenerate plan mid-cycle or require manual approval.
+5. **Distribution roadmap:** clarify timing for native app store launch vs staying Whop-only initially.
 
 ---
 
-## 14) Screens (MVP)
-1. **Auth** (Login/Signup/Reset).  
-2. **Onboarding wizard** (5–7 ekrana).  
-3. **Plan preview** (nutricija + trening + navike).  
-4. **Home/Dashboard**.  
-5. **Workout detail** (timer, serije, alternative).  
-6. **Meals day** (zamene, recept, lista kupovine).  
-7. **Habits**.  
-8. **Planner**.  
-9. **Profile & Settings** (merenja, integracije, notifikacije, subscription).
+## 12. Appendix: Quick Recovery Procedures
+
+- **Webhook 401 errors:** usually secret mismatch. Update `WHOP_WEBHOOK_SECRET` in Supabase, paste same value in Whop, redeploy function.
+- **Membership stuck in unknown:** check Supabase Invocations; if only payment events arrived, wait for `membership.went_valid` or rerun from Whop → Recent deliveries.
+- **Manual override:** to unblock a member, run `update public.whop_memberships set status='active', current_period_end=now()+interval '30 days' where email ilike 'user@email.com';` and then `select claim_membership('user@email.com');`.
+- **Plan reset:** from Profile tab tap “Reset plan”; Supabase deletes plan/profile/logs. Use only once membership status is healthy.
 
 ---
 
-## 15) Edge cases
-- Bez opreme → auto zamene za trake/težina tela.  
-- Alergije → filter recepata.  
-- Vegetarijan → proteinske zamene.  
-- Povreda/kreatin/period post → korisnik može pauzirati trening; kalorije se automatski spuste 10%.  
-- Offline: cache poslednjih 7 dana planova i recepata.
+## 13. Contact & Ownership
 
----
+- Product + Operations: Marko
+- Engineering support (current cycle): Codex assistant + external collaborators
+- Design/copy: existing brand kit with warm terracotta palette (see original assets)
+- Content: founder-curated exercises/recipes in Supabase tables
 
-## 16) QA checklist (acceptance tests)
-- [ ] Onboarding validacije i lokalizacija.  
-- [ ] Generacija plana <1s sa default sadržajem.  
-- [ ] Trening: markiranje serija i progresija kroz nedelje.  
-- [ ] Meal swap zadržava kalorijsku kategoriju.  
-- [ ] Lista kupovine tačna po meri.  
-- [ ] Reminder radi foreground/background.  
-- [ ] Subscription gating Pro.  
-- [ ] Export podataka i brisanje naloga.
-
----
-
-## 17) Content requirements
-- **Exercises:** 120 vežbi sa tagovima (home/gym, trake/bučice/mašine).  
-- **Recipes:** 60 recepata sa makroima i tagovima (IR‑friendly, brzo, budžet).  
-- **Habits/Guides:** kratki tekst + audio NSDR (5/10/20).  
-- **Images:** koristite postojeći brend paket.
-
----
-
-## 18) Roadmap
-- **MVP (0 → 1):** core flows gore + 30 recepata + 60 vežbi.  
-- **v1.1:** period mode, ciklus‑aware napomene; deload auto.  
-- **v1.2:** coach portal za ručnu korekciju planova.  
-- **v1.3:** challenges i shareable progres kartice.
-
----
-
-## 19) Legal
-- "Fitkofer nije zamena za medicinski savet. Posavetujte se sa lekarom, posebno kod IR/Hashimoto/PCOS."  
-- Uslovi korišćenja i Politika privatnosti linkovani iz Settings.
-
----
-
-## 20) Developer notes
-- Keep **pure functions** for calculations; unit‑test kalorije/makroi i progresije.  
-- Seed JSON za vežbe i recepte.  
-- Use feature flags (PostHog) za paywall varijante.  
-- App state: Zustand/Redux minimal; SQLite for offline cache (expo‑sqlite).  
-- Images & audio u CDN (Supabase Storage).  
-- Accessibility: dynamic type + sufficient contrast per palette.
-
----
-
-## 21) Example API contracts
-```
-POST /plan/generate
-{ user_id, profile_snapshot_id }
-→ { training_plan_id, nutrition_plan_id, habits_plan_id }
-
-GET /day/:date
-→ { workouts:[...], meals:[...], habits:[...], reminders:[...] }
-
-POST /complete
-{ type:'workout'|'meal'|'habit', ref_id, date, value }
-```
-
----
-
-## 22) Sample content blocks (sr‑lat)
-**NSDR 5 min:** "Zauzmi udoban položaj, zatvori oči, udah broji do 4, izdah do 6…"  
-**Habit kartica — San:** "Uključi *no‑screens* 60 min pre spavanja."
-
----
-
-## 23) Success metrics
-- D7 activation ≥40% (≥1 trening + 3 navike + 1 dan ishrane zabeležen).  
-- Mesečni retention ≥25%.  
-- Avg adherence 4 nedelje ≥60%.
-
----
-
-**End of MVP PRD v1**
+This document reflects the state of the product after completing Whop membership integration. Update it at the end of each major phase to keep stakeholders aligned.
 

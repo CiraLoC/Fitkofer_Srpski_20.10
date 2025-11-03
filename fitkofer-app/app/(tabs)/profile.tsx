@@ -1,13 +1,11 @@
 import { useEffect, useMemo } from "react";
-import {
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useRouter } from "expo-router";
 
+import { useColorScheme } from "@/components/useColorScheme";
+import Screen from "@/components/ui/Screen";
+import Card from "@/components/ui/Card";
+import { H1, H2, Body, Label } from "@/components/ui/Typography";
 import Colors from "@/constants/Colors";
 import { useAppState } from "@/state/AppStateContext";
 
@@ -18,6 +16,105 @@ function formatDate(iso: string) {
     year: "numeric",
   });
 }
+
+const buildStyles = (
+  theme: typeof Colors.light | typeof Colors.dark,
+  surfaces: { card: string; accent: string },
+) =>
+  StyleSheet.create({
+    stack: {
+      gap: 18,
+    },
+    centered: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      padding: 32,
+      gap: 16,
+    },
+    emptyText: {
+      fontFamily: "Inter_500Medium",
+      color: theme.text,
+      textAlign: "center",
+    },
+    primaryButton: {
+      backgroundColor: theme.tint,
+      paddingVertical: 14,
+      paddingHorizontal: 22,
+      borderRadius: 16,
+    },
+    primaryLabel: {
+      fontFamily: "Inter_600SemiBold",
+      color: theme.background,
+    },
+    actionRow: {
+      flexDirection: "row",
+      gap: 12,
+    },
+    secondaryButton: {
+      flex: 1,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: theme.border,
+      backgroundColor: surfaces.card,
+      paddingVertical: 12,
+      alignItems: "center",
+    },
+    secondaryLabel: {
+      fontFamily: "Inter_600SemiBold",
+      color: theme.text,
+    },
+    cardSpacing: {
+      gap: 14,
+    },
+    row: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+    label: {
+      fontFamily: "Inter_500Medium",
+      color: theme.mutedText,
+    },
+    value: {
+      fontFamily: "Inter_600SemiBold",
+      color: theme.text,
+    },
+    membershipActions: {
+      flexDirection: "row",
+      gap: 12,
+    },
+    membershipButton: {
+      flex: 1,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: theme.border,
+      paddingVertical: 10,
+      alignItems: "center",
+      backgroundColor: surfaces.accent,
+    },
+    membershipLabel: {
+      fontFamily: "Inter_500Medium",
+      color: theme.text,
+    },
+    historyRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      borderRadius: 12,
+      padding: 12,
+      backgroundColor: surfaces.accent,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    historyLabel: {
+      fontFamily: "Inter_500Medium",
+      color: theme.text,
+    },
+    historyBody: {
+      color: theme.mutedText,
+    },
+  });
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -39,12 +136,23 @@ export default function ProfileScreen() {
   const goalLabel = useMemo(() => {
     if (!profile) return "";
     if (profile.goal === "lose") return "Gubitak masnog tkiva";
-    if (profile.goal === "gain") return "Dobitak misica";
-    return "Odrzavanje";
+    if (profile.goal === "gain") return "Dobitak mišića";
+    return "Održavanje";
   }, [profile]);
   const hasActiveMembership = ["active", "trialing", "grace"].includes(
     membershipStatus,
   );
+
+  const scheme = useColorScheme();
+  const theme = Colors[scheme];
+  const surfaces = useMemo(
+    () => ({
+      card: scheme === "light" ? Colors.palette.cream : "#241D19",
+      accent: scheme === "light" ? Colors.palette.sand : "#2D241F",
+    }),
+    [scheme],
+  );
+  const styles = useMemo(() => buildStyles(theme, surfaces), [theme, surfaces]);
 
   useEffect(() => {
     if (isHydrated && !session) {
@@ -58,25 +166,29 @@ export default function ProfileScreen() {
 
   if (!profile || !plan) {
     return (
-      <View style={styles.centered}>
-        <Text style={styles.emptyText}>
-          {hasActiveMembership
-            ? "Još nema podataka. Završi onboarding da pokreneš plan."
-            : "Aktiviraj Whop članstvo da bi pristupila profilu i planu."}
-        </Text>
-        <TouchableOpacity
-          style={styles.primaryButton}
-          onPress={() =>
-            router.replace(
-              hasActiveMembership ? "/onboarding" : "/membership-required",
-            )
-          }
-        >
-          <Text style={styles.primaryLabel}>
-            {hasActiveMembership ? "Pokreni onboarding" : "Aktiviraj članstvo"}
-          </Text>
-        </TouchableOpacity>
-      </View>
+      <Screen>
+        <View style={styles.centered}>
+          <Body style={styles.emptyText}>
+            {hasActiveMembership
+              ? "Još nema podataka. Završi onboarding da pokreneš plan."
+              : "Aktiviraj Whop članstvo da bi pristupila profilu i planu."}
+          </Body>
+          <TouchableOpacity
+            style={styles.primaryButton}
+            onPress={() =>
+              router.replace(
+                hasActiveMembership ? "/onboarding" : "/membership-required",
+              )
+            }
+          >
+            <Text style={styles.primaryLabel}>
+              {hasActiveMembership
+                ? "Pokreni onboarding"
+                : "Aktiviraj članstvo"}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </Screen>
     );
   }
 
@@ -90,308 +202,161 @@ export default function ProfileScreen() {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.heading}>Tvoj profil</Text>
-      <Text style={styles.copy}>
-        Podaci su sačuvani u Supabase profilu. Možeš ih menjati ručno ili
-        ponoviti onboarding u bilo kom trenutku.
-      </Text>
-
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Članstvo</Text>
-        <View style={styles.row}>
-          <Text style={styles.label}>Status</Text>
-          <Text style={styles.value}>{membershipStatus}</Text>
+    <Screen scroll contentPadding={24}>
+      <View style={styles.stack}>
+        <View>
+          <H1>Tvoj profil</H1>
+          <Body style={{ color: theme.mutedText }}>
+            Podaci su sačuvani u Supabase profilu. Možeš ih menjati ručno ili
+            ponoviti onboarding u bilo kom trenutku.
+          </Body>
         </View>
-        {membershipPeriodEnd ? (
+
+        <Card style={styles.cardSpacing}>
+          <H2>Članstvo</H2>
           <View style={styles.row}>
-            <Text style={styles.label}>Važi do</Text>
-            <Text style={styles.value}>
-              {new Date(membershipPeriodEnd).toLocaleDateString("sr-RS", {
-                day: "2-digit",
-                month: "short",
-                year: "numeric",
-              })}
-            </Text>
+            <Label style={styles.label}>Status</Label>
+            <Text style={styles.value}>{membershipStatus}</Text>
           </View>
-        ) : null}
-        <View style={styles.membershipActions}>
-          <TouchableOpacity
-            style={styles.secondaryButton}
-            onPress={() => void refreshMembership()}
-          >
-            <Text style={styles.secondaryLabel}>Osveži status</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.secondaryButton}
-            onPress={handleMembershipManage}
-          >
-            <Text style={styles.secondaryLabel}>Upravljaj članstvom</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      <View style={styles.buttonRow}>
-        <TouchableOpacity
-          style={styles.secondaryButton}
-          onPress={() => router.push("/profile-edit")}
-        >
-          <Text style={styles.secondaryLabel}>Uredi profil</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.secondaryButton} onPress={signOut}>
-          <Text style={styles.secondaryLabel}>Odjavi se</Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Osnovne informacije</Text>
-        <View style={styles.row}>
-          <Text style={styles.label}>Godine</Text>
-          <Text style={styles.value}>{profile.age}</Text>
-        </View>
-        <View style={styles.row}>
-          <Text style={styles.label}>Visina</Text>
-          <Text style={styles.value}>{profile.heightCm} cm</Text>
-        </View>
-        <View style={styles.row}>
-          <Text style={styles.label}>Težina</Text>
-          <Text style={styles.value}>{profile.weightKg} kg</Text>
-        </View>
-        <View style={styles.row}>
-          <Text style={styles.label}>Cilj</Text>
-          <Text style={styles.value}>{goalLabel}</Text>
-        </View>
-        <View style={styles.row}>
-          <Text style={styles.label}>Aktivnost</Text>
-          <Text style={styles.value}>{profile.activityLevel}</Text>
-        </View>
-        <View style={styles.row}>
-          <Text style={styles.label}>Planirani treninzi</Text>
-          <Text style={styles.value}>{profile.daysPerWeek}x nedeljno</Text>
-        </View>
-      </View>
-
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Menstrualni ciklus</Text>
-        <Text style={styles.copy}>
-          Informacije pomažu pri prilagođavanju treninga i kalorija.
-        </Text>
-        <View style={styles.row}>
-          <Text style={styles.label}>Dužina ciklusa</Text>
-          <Text style={styles.value}>
-            {profile.cycleLengthDays
-              ? `${profile.cycleLengthDays} dana`
-              : "Nije uneto"}
-          </Text>
-        </View>
-        <View style={styles.row}>
-          <Text style={styles.label}>Trajanje menstruacije</Text>
-          <Text style={styles.value}>
-            {profile.periodLengthDays
-              ? `${profile.periodLengthDays} dana`
-              : "Nije uneto"}
-          </Text>
-        </View>
-        <View style={styles.row}>
-          <Text style={styles.label}>Poslednja menstruacija</Text>
-          <Text style={styles.value}>
-            {profile.lastPeriodDate
-              ? formatDate(profile.lastPeriodDate)
-              : "Nije uneto"}
-          </Text>
-        </View>
-      </View>
-
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Zdravstveni kontekst</Text>
-        <Text style={styles.copy}>
-          Plan je prilagođen navedenim stanjima i ograničenjima.
-        </Text>
-        <Text style={styles.value}>
-          {profile.healthConditions.length > 0
-            ? profile.healthConditions.join(", ")
-            : "Nema specifičnih stanja"}
-        </Text>
-        <Text style={styles.copy}>
-          Alergije: {profile.allergies.join(", ") || "Nema"}
-        </Text>
-        <Text style={styles.copy}>
-          Ne volim: {profile.dislikedFoods.join(", ") || "Nema"}
-        </Text>
-      </View>
-
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Integracije</Text>
-        <View style={styles.integrationRow}>
-          <Text style={styles.integrationTitle}>Apple Health / Google Fit</Text>
-          <Text style={styles.integrationStatus}>
-            Read-only (koraci, energija)
-          </Text>
-        </View>
-        <Text style={styles.copy}>
-          Automatska sinhronizacija stiže kroz Supabase Edge funkciju.
-        </Text>
-      </View>
-
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Pretplata</Text>
-        <Text style={styles.copy}>
-          Fitkofer Pro (7 dana probno) – upravljanje kroz RevenueCat dashboard.
-        </Text>
-        <Text style={styles.copy}>Status: Aktivna (primer)</Text>
-        <TouchableOpacity style={styles.secondaryButton}>
-          <Text style={styles.secondaryLabel}>Kontakt podršku za promene</Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Istorija promena profila</Text>
-        {recentSnapshots.length === 0 ? (
-          <Text style={styles.copy}>
-            Još uvek nema sačuvanih istorijskih zapisa.
-          </Text>
-        ) : (
-          recentSnapshots.map((snapshot) => (
-            <View key={snapshot.capturedAt} style={styles.historyItem}>
-              <Text style={styles.historyDate}>
-                {formatDate(snapshot.capturedAt)}
-              </Text>
-              <Text style={styles.historyDetail}>
-                {snapshot.profile.weightKg} kg · {snapshot.profile.daysPerWeek}x
-                treninga · cilj {snapshot.profile.goal}
+          {membershipPeriodEnd ? (
+            <View style={styles.row}>
+              <Label style={styles.label}>Važi do</Label>
+              <Text style={styles.value}>
+                {formatDate(membershipPeriodEnd)}
               </Text>
             </View>
-          ))
-        )}
-      </View>
+          ) : null}
+          <View style={styles.membershipActions}>
+            <TouchableOpacity
+              style={styles.membershipButton}
+              onPress={() => void refreshMembership()}
+            >
+              <Text style={styles.membershipLabel}>Osveži status</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.membershipButton}
+              onPress={handleMembershipManage}
+            >
+              <Text style={styles.membershipLabel}>Upravljaj članstvom</Text>
+            </TouchableOpacity>
+          </View>
+        </Card>
 
-      <TouchableOpacity style={styles.primaryButton} onPress={handleRegenerate}>
-        <Text style={styles.primaryLabel}>Ponovi onboarding</Text>
-      </TouchableOpacity>
-    </ScrollView>
+        <View style={styles.actionRow}>
+          <TouchableOpacity
+            style={styles.secondaryButton}
+            onPress={() => router.push("/profile-edit")}
+          >
+            <Text style={styles.secondaryLabel}>Uredi profil</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.secondaryButton} onPress={signOut}>
+            <Text style={styles.secondaryLabel}>Odjavi se</Text>
+          </TouchableOpacity>
+        </View>
+
+        <Card style={styles.cardSpacing}>
+          <H2>Osnovne informacije</H2>
+          <View style={styles.row}>
+            <Label style={styles.label}>Godine</Label>
+            <Text style={styles.value}>{profile.age}</Text>
+          </View>
+          <View style={styles.row}>
+            <Label style={styles.label}>Visina</Label>
+            <Text style={styles.value}>{profile.heightCm} cm</Text>
+          </View>
+          <View style={styles.row}>
+            <Label style={styles.label}>Težina</Label>
+            <Text style={styles.value}>{profile.weightKg} kg</Text>
+          </View>
+          <View style={styles.row}>
+            <Label style={styles.label}>Cilj</Label>
+            <Text style={styles.value}>{goalLabel}</Text>
+          </View>
+          <View style={styles.row}>
+            <Label style={styles.label}>Aktivnost</Label>
+            <Text style={styles.value}>{profile.activityLevel}</Text>
+          </View>
+          <View style={styles.row}>
+            <Label style={styles.label}>Planirani treninzi</Label>
+            <Text style={styles.value}>{profile.daysPerWeek}x nedeljno</Text>
+          </View>
+        </Card>
+
+        <Card style={styles.cardSpacing}>
+          <H2>Menstrualni ciklus</H2>
+          <Body style={{ color: theme.mutedText }}>
+            Informacije pomažu pri prilagođavanju treninga i kalorija.
+          </Body>
+          <View style={styles.row}>
+            <Label style={styles.label}>Dužina ciklusa</Label>
+            <Text style={styles.value}>
+              {profile.cycleLengthDays
+                ? `${profile.cycleLengthDays} dana`
+                : "Nije uneto"}
+            </Text>
+          </View>
+          <View style={styles.row}>
+            <Label style={styles.label}>Trajanje menstruacije</Label>
+            <Text style={styles.value}>
+              {profile.periodLengthDays
+                ? `${profile.periodLengthDays} dana`
+                : "Nije uneto"}
+            </Text>
+          </View>
+          <View style={styles.row}>
+            <Label style={styles.label}>Poslednja menstruacija</Label>
+            <Text style={styles.value}>
+              {profile.lastPeriodDate
+                ? formatDate(profile.lastPeriodDate)
+                : "Nije uneto"}
+            </Text>
+          </View>
+        </Card>
+
+        <Card style={styles.cardSpacing}>
+          <H2>Istorija snimljenih podataka</H2>
+          {recentSnapshots.length === 0 ? (
+            <Body style={{ color: theme.mutedText }}>
+              Nema snimljenih verzija profila. Nakon ažuriranja podataka
+              sačuvaće se poslednjih pet stanja.
+            </Body>
+          ) : (
+            recentSnapshots.map((snapshot) => (
+              <View key={snapshot.id} style={styles.historyRow}>
+                <View>
+                  <Text style={styles.historyLabel}>
+                    {formatDate(snapshot.createdAt)}
+                  </Text>
+                  <Text style={styles.historyBody}>
+                    {snapshot.goal === "lose"
+                      ? "Gubitak masnog tkiva"
+                      : snapshot.goal === "gain"
+                        ? "Dobitak mišića"
+                        : "Održavanje"}
+                  </Text>
+                </View>
+                <Text style={styles.historyBody}>{snapshot.weightKg} kg</Text>
+              </View>
+            ))
+          )}
+        </Card>
+
+        <Card style={styles.cardSpacing}>
+          <H2>Plan reset</H2>
+          <Body style={{ color: theme.mutedText }}>
+            Ponovi onboarding kada želiš da prilagodiš plan ciljevima ili
+            opremi.
+          </Body>
+          <TouchableOpacity
+            style={styles.primaryButton}
+            onPress={handleRegenerate}
+          >
+            <Text style={styles.primaryLabel}>Regeneriši plan</Text>
+          </TouchableOpacity>
+        </Card>
+      </View>
+    </Screen>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.light.background,
-  },
-  content: {
-    padding: 24,
-    paddingBottom: 100,
-    gap: 18,
-  },
-  centered: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 24,
-    backgroundColor: Colors.light.background,
-    gap: 16,
-  },
-  emptyText: {
-    fontFamily: "Inter_500Medium",
-    color: Colors.light.text,
-    textAlign: "center",
-  },
-  heading: {
-    fontFamily: "PlayfairDisplay_700Bold",
-    fontSize: 26,
-    color: Colors.light.text,
-  },
-  copy: {
-    fontFamily: "Inter_400Regular",
-    color: "#5C5C5C",
-    lineHeight: 20,
-  },
-  card: {
-    backgroundColor: Colors.light.card,
-    borderRadius: 20,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: Colors.light.border,
-    gap: 12,
-  },
-  cardTitle: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 18,
-    color: Colors.light.text,
-  },
-  row: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  label: {
-    fontFamily: "Inter_400Regular",
-    color: "#6B5E58",
-  },
-  value: {
-    fontFamily: "Inter_600SemiBold",
-    color: Colors.light.text,
-  },
-  integrationRow: {
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: Colors.light.border,
-    backgroundColor: Colors.light.background,
-    padding: 14,
-    gap: 4,
-  },
-  integrationTitle: {
-    fontFamily: "Inter_600SemiBold",
-    color: Colors.light.text,
-  },
-  integrationStatus: {
-    fontFamily: "Inter_400Regular",
-    color: "#6B5E58",
-  },
-  primaryButton: {
-    backgroundColor: Colors.light.tint,
-    borderRadius: 16,
-    paddingVertical: 16,
-    alignItems: "center",
-  },
-  primaryLabel: {
-    fontFamily: "Inter_600SemiBold",
-    color: Colors.light.background,
-    fontSize: 16,
-  },
-  secondaryButton: {
-    borderRadius: 16,
-    paddingVertical: 14,
-    paddingHorizontal: 18,
-    borderWidth: 1,
-    borderColor: Colors.light.border,
-    backgroundColor: Colors.light.background,
-  },
-  secondaryLabel: {
-    fontFamily: "Inter_500Medium",
-    color: Colors.light.text,
-  },
-  buttonRow: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  membershipActions: {
-    flexDirection: "row",
-    gap: 12,
-    flexWrap: "wrap",
-  },
-  historyItem: {
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: Colors.light.border,
-    padding: 12,
-    gap: 4,
-    backgroundColor: Colors.light.background,
-  },
-  historyDate: {
-    fontFamily: "Inter_600SemiBold",
-    color: Colors.light.text,
-  },
-  historyDetail: {
-    fontFamily: "Inter_400Regular",
-    color: "#5C5C5C",
-  },
-});
+ProfileScreen.displayName = "ProfileScreen";

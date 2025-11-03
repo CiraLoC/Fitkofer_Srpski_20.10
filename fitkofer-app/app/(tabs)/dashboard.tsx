@@ -1,22 +1,30 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import {
-  ScrollView,
+  Animated,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
 
+import { useColorScheme } from "@/components/useColorScheme";
+import Screen from "@/components/ui/Screen";
+import Card from "@/components/ui/Card";
+import Logo from "@/components/ui/Logo";
+import ThemeToggle from "@/components/ui/ThemeToggle";
+import { H1, H2, Body, Label } from "@/components/ui/Typography";
 import Colors from "@/constants/Colors";
 import { formatLocalISODate } from "@/lib/utils/date";
 import { useAppState } from "@/state/AppStateContext";
 import type { DayIntensity, StressLevel } from "@/types";
 
+type ThemeColors = typeof Colors.light;
+
 const dayLabels = [
   "Ponedeljak",
   "Utorak",
   "Sreda",
-  "Četvrtak",
+  "Cetvrtak",
   "Petak",
   "Subota",
   "Nedelja",
@@ -35,6 +43,15 @@ const energyOptions: { label: string; value: StressLevel }[] = [
 ];
 
 export default function DashboardScreen() {
+  const scheme = useColorScheme();
+  const theme = Colors[scheme];
+  const accentSurface = scheme === "light" ? Colors.palette.cream : "#26201C";
+  const completedSurface = scheme === "light" ? Colors.palette.sand : "#332720";
+  const styles = useMemo(
+    () => createStyles(theme, accentSurface, completedSurface),
+    [theme, accentSurface, completedSurface],
+  );
+
   const {
     plan,
     logs,
@@ -51,15 +68,28 @@ export default function DashboardScreen() {
   const isoDate = formatLocalISODate(today);
   const log = logs[isoDate];
 
+  const fadeAnim = useRef(new Animated.Value(0));
+  useEffect(() => {
+    Animated.timing(fadeAnim.current, {
+      toValue: 1,
+      duration: 350,
+      useNativeDriver: true,
+    }).start();
+  }, []);
+
   if (!plan) {
     return (
-      <View style={styles.centered}>
-        <Text style={styles.emptyText}>
-          {hasActiveMembership
-            ? "Nema aktivnog plana. Prođi onboarding da kreiraš plan."
-            : "Aktiviraj Whop članstvo da bi otključala svoj plan i treninge."}
-        </Text>
-      </View>
+      <Screen>
+        <View style={styles.emptyState}>
+          <Logo style={styles.emptyLogo} />
+          <H2 style={styles.emptyHeading}>Aktiviraj svoj plan</H2>
+          <Body style={styles.emptyCopy}>
+            {hasActiveMembership
+              ? "Nema generisanog plana. Prodji onboarding i kreiraj personalizovane treninge i ishranu."
+              : "Aktiviraj Whop clanstvo da bi otkljucala plan, treninge i svakodnevne navike."}
+          </Body>
+        </View>
+      </Screen>
     );
   }
 
@@ -86,352 +116,373 @@ export default function DashboardScreen() {
     totalTodos > 0 ? Math.round((completedTodos / totalTodos) * 100) : 0;
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <View>
-        <Text style={styles.greeting}>Zdravo!</Text>
-        <Text style={styles.dateText}>
-          {dayLabels[dayIndex]}, {today.toLocaleDateString("sr-RS")}
-        </Text>
-      </View>
-
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Uspešnost</Text>
-        <Text style={styles.adherenceValue}>{adherence}%</Text>
-        <Text style={styles.bodyText}>Dnevni progres za plan</Text>
-        <View style={styles.progressBar}>
-          <View style={[styles.progressFill, { width: `${adherence}%` }]} />
+    <Screen scroll contentPadding={24}>
+      <Animated.View style={[styles.fadeIn, { opacity: fadeAnim.current }]}>
+        <View style={styles.headerRow}>
+          <View>
+            <H1 style={styles.greeting}>Zdravo!</H1>
+            <Body style={styles.dateText}>
+              {dayLabels[dayIndex]}, {today.toLocaleDateString("sr-RS")}
+            </Body>
+          </View>
+          <ThemeToggle />
         </View>
-      </View>
 
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Današnji fokus</Text>
-        <Text style={styles.bodyText}>{intensityCopy[rotation]}</Text>
-        <Text style={styles.macroHighlight}>
-          {dailyNutrition.calories} kcal · P {dailyNutrition.protein}g · U{" "}
-          {dailyNutrition.carbs}g · M {dailyNutrition.fats}g
-        </Text>
-      </View>
+        <Card style={styles.cardSpacing}>
+          <H2>Uspesnost</H2>
+          <Text style={styles.adherenceValue}>{adherence}%</Text>
+          <Body>Dnevni progres za plan</Body>
+          <View style={styles.progressBar}>
+            <View style={[styles.progressFill, { width: `${adherence}%` }]} />
+          </View>
+        </Card>
 
-      {workout ? (
-        <View style={styles.card}>
+        <Card style={styles.cardSpacing}>
+          <H2>Danasnji fokus</H2>
+          <Body>{intensityCopy[rotation]}</Body>
+          <Text style={styles.macroHighlight}>
+            {dailyNutrition.calories} kcal / P {dailyNutrition.protein}g / U{" "}
+            {dailyNutrition.carbs}g / M {dailyNutrition.fats}g
+          </Text>
+        </Card>
+
+        <Card style={styles.cardSpacing}>
           <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle}>Trening</Text>
-            <TouchableOpacity
-              onPress={() => toggleWorkoutCompletion(isoDate, workout.id)}
-            >
-              <Text style={styles.actionLink}>
-                {log?.workoutsCompleted.includes(workout.id)
-                  ? "Poništi"
-                  : "Označi kao završeno"}
-              </Text>
-            </TouchableOpacity>
+            <H2>Trening</H2>
+            {workout ? (
+              <TouchableOpacity
+                onPress={() => toggleWorkoutCompletion(isoDate, workout.id)}
+              >
+                <Label style={styles.actionLink}>
+                  {log?.workoutsCompleted.includes(workout.id)
+                    ? "Ponisti"
+                    : "Oznaci kao zavrseno"}
+                </Label>
+              </TouchableOpacity>
+            ) : null}
           </View>
-          <Text style={styles.workoutTitle}>{workout.title}</Text>
-          <Text style={styles.bodyText}>
-            {workout.durationMinutes} min · {workout.exercises.length} vežbi
-          </Text>
-          <View style={styles.exerciseList}>
-            {workout.exercises.map((exercise) => (
-              <View key={exercise.id} style={styles.exerciseItem}>
-                <Text style={styles.exerciseName}>{exercise.name}</Text>
-                <Text style={styles.exerciseMeta}>
-                  {exercise.sets} serije · {exercise.repRange} ponavljanja ·{" "}
-                  {exercise.equipment}
-                </Text>
+          {workout ? (
+            <View style={styles.workoutContent}>
+              <Text style={styles.workoutTitle}>{workout.title}</Text>
+              <Body>
+                {workout.durationMinutes} min / {workout.exercises.length} vezbi
+              </Body>
+              <View style={styles.exerciseList}>
+                {workout.exercises.map((exercise) => (
+                  <View key={exercise.id} style={styles.exerciseItem}>
+                    <View style={styles.exerciseHeader}>
+                      <Text style={styles.exerciseName}>{exercise.name}</Text>
+                      <Label style={styles.exerciseMeta}>
+                        {exercise.sets} serije / {exercise.repRange} ponavljanja
+                        / {exercise.equipment}
+                      </Label>
+                    </View>
+                    <Body style={styles.exerciseDetail}>
+                      {exercise.instructions}
+                    </Body>
+                  </View>
+                ))}
               </View>
-            ))}
-          </View>
-        </View>
-      ) : (
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Oporavak</Text>
-          <Text style={styles.bodyText}>
-            Danas nema strukturiranog treninga. Fokus na šetnju i NSDR.
-          </Text>
-        </View>
-      )}
+            </View>
+          ) : (
+            <Body>
+              Danas nema planiranog treninga. Fokus na laganu setnju, mobilnost
+              i disanje.
+            </Body>
+          )}
+        </Card>
 
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Obroci</Text>
-        {dailyNutrition.meals.map((meal) => {
-          const completed = log?.mealsCompleted.includes(meal.id);
-          return (
-            <TouchableOpacity
-              key={meal.id}
-              style={[
-                styles.mealItem,
-                completed ? styles.mealItemCompleted : undefined,
-              ]}
-              onPress={() => toggleMealCompletion(isoDate, meal.id)}
-            >
-              <View style={styles.mealHeader}>
-                <Text
-                  style={[
-                    styles.mealTitle,
-                    completed ? styles.completedText : undefined,
-                  ]}
-                >
-                  {meal.title}
-                </Text>
-                <Text style={styles.mealCalories}>{meal.calories} kcal</Text>
-              </View>
-              <Text style={styles.mealMacros}>
-                P {meal.protein}g · U {meal.carbs}g · M {meal.fats}g
-              </Text>
-              <Text style={styles.mealTags}>{meal.tags.join(" • ")}</Text>
-            </TouchableOpacity>
-          );
-        })}
-        <View style={styles.swapRow}>
-          <Text style={styles.bodyText}>
-            Treba zamena? Na ekranu Ishrana možeš izabrati alternativu.
-          </Text>
-        </View>
-      </View>
-
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Navike</Text>
-        <View style={styles.habitList}>
-          {habits.map((habit) => {
-            const completed = log?.habitsCompleted.includes(habit.id);
+        <Card style={styles.cardSpacing}>
+          <H2>Obroci</H2>
+          {dailyNutrition.meals.map((meal) => {
+            const completed = log?.mealsCompleted.includes(meal.id);
             return (
               <TouchableOpacity
-                key={habit.id}
+                key={meal.id}
                 style={[
-                  styles.habitItem,
-                  completed ? styles.habitItemCompleted : undefined,
+                  styles.mealItem,
+                  completed ? styles.mealItemCompleted : undefined,
                 ]}
-                onPress={() => toggleHabitCompletion(isoDate, habit.id)}
+                onPress={() => toggleMealCompletion(isoDate, meal.id)}
+                activeOpacity={0.82}
               >
-                <Text
-                  style={[
-                    styles.habitTitle,
-                    completed ? styles.completedText : undefined,
-                  ]}
-                >
-                  {habit.title}
-                </Text>
-                <Text style={styles.habitDescription}>{habit.description}</Text>
+                <View style={styles.mealHeader}>
+                  <Text
+                    style={[
+                      styles.mealTitle,
+                      completed ? styles.completedText : undefined,
+                    ]}
+                  >
+                    {meal.title}
+                  </Text>
+                  <Label style={styles.mealCalories}>
+                    {meal.calories} kcal
+                  </Label>
+                </View>
+                <Label style={styles.mealMacros}>
+                  P {meal.protein}g / U {meal.carbs}g / M {meal.fats}g
+                </Label>
+                <Body style={styles.mealTags}>{meal.tags.join(" | ")}</Body>
               </TouchableOpacity>
             );
           })}
-        </View>
-      </View>
+          <Body style={styles.swapHint}>
+            Treba zamena? Na ekranu Ishrana mozes izabrati alternativu.
+          </Body>
+        </Card>
 
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Energija</Text>
-        <Text style={styles.bodyText}>Kako se osećaš danas?</Text>
-        <View style={styles.pillRow}>
-          {energyOptions.map((option) => {
-            const selected = log?.energy === option.value;
-            return (
-              <TouchableOpacity
-                key={option.value}
-                onPress={() => setDailyEnergy(isoDate, option.value)}
-                style={[
-                  styles.energyPill,
-                  selected ? styles.energyPillSelected : undefined,
-                ]}
-              >
-                <Text
+        <Card style={styles.cardSpacing}>
+          <H2>Navike</H2>
+          <View style={styles.habitList}>
+            {habits.map((habit) => {
+              const completed = log?.habitsCompleted.includes(habit.id);
+              return (
+                <TouchableOpacity
+                  key={habit.id}
                   style={[
-                    styles.energyLabel,
-                    selected ? styles.energyLabelSelected : undefined,
+                    styles.habitItem,
+                    completed ? styles.habitItemCompleted : undefined,
                   ]}
+                  onPress={() => toggleHabitCompletion(isoDate, habit.id)}
+                  activeOpacity={0.82}
                 >
-                  {option.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      </View>
-    </ScrollView>
+                  <Text
+                    style={[
+                      styles.habitTitle,
+                      completed ? styles.completedText : undefined,
+                    ]}
+                  >
+                    {habit.title}
+                  </Text>
+                  <Body style={styles.habitDescription}>
+                    {habit.description}
+                  </Body>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </Card>
+
+        <Card style={styles.cardSpacing}>
+          <H2>Energija</H2>
+          <Body>Kako se osecas danas?</Body>
+          <View style={styles.pillRow}>
+            {energyOptions.map((option) => {
+              const selected = log?.energy === option.value;
+              return (
+                <TouchableOpacity
+                  key={option.value}
+                  onPress={() => setDailyEnergy(isoDate, option.value)}
+                  style={[
+                    styles.energyPill,
+                    selected ? styles.energyPillSelected : undefined,
+                  ]}
+                  activeOpacity={0.85}
+                >
+                  <Label
+                    style={[
+                      styles.energyLabel,
+                      selected ? styles.energyLabelSelected : undefined,
+                    ]}
+                  >
+                    {option.label}
+                  </Label>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </Card>
+      </Animated.View>
+    </Screen>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.light.background,
-  },
-  content: {
-    padding: 24,
-    gap: 18,
-    paddingBottom: 100,
-  },
-  centered: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 24,
-    backgroundColor: Colors.light.background,
-  },
-  emptyText: {
-    fontFamily: "Inter_500Medium",
-    color: Colors.light.text,
-    textAlign: "center",
-  },
-  greeting: {
-    fontFamily: "PlayfairDisplay_700Bold",
-    fontSize: 26,
-    color: Colors.light.text,
-  },
-  dateText: {
-    fontFamily: "Inter_400Regular",
-    color: "#6B5E58",
-  },
-  card: {
-    backgroundColor: Colors.light.card,
-    borderRadius: 20,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: Colors.light.border,
-    gap: 14,
-  },
-  cardHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  cardTitle: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 18,
-    color: Colors.light.text,
-  },
-  bodyText: {
-    fontFamily: "Inter_400Regular",
-    color: "#5C5C5C",
-  },
-  adherenceValue: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 36,
-    color: Colors.light.tint,
-  },
-  progressBar: {
-    height: 8,
-    backgroundColor: Colors.light.background,
-    borderRadius: 999,
-  },
-  progressFill: {
-    height: "100%",
-    backgroundColor: Colors.light.tint,
-    borderRadius: 999,
-  },
-  macroHighlight: {
-    fontFamily: "Inter_500Medium",
-    color: Colors.light.text,
-  },
-  workoutTitle: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 16,
-    color: Colors.light.text,
-  },
-  exerciseList: {
-    gap: 10,
-  },
-  exerciseItem: {
-    backgroundColor: Colors.light.background,
-    borderRadius: 14,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: Colors.light.border,
-  },
-  exerciseName: {
-    fontFamily: "Inter_600SemiBold",
-    color: Colors.light.text,
-  },
-  exerciseMeta: {
-    fontFamily: "Inter_400Regular",
-    color: "#6B5E58",
-    marginTop: 4,
-  },
-  mealItem: {
-    padding: 16,
-    borderRadius: 14,
-    backgroundColor: Colors.light.background,
-    borderWidth: 1,
-    borderColor: Colors.light.border,
-    gap: 8,
-  },
-  mealItemCompleted: {
-    backgroundColor: Colors.palette.sand,
-  },
-  mealHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  mealTitle: {
-    fontFamily: "Inter_600SemiBold",
-    color: Colors.light.text,
-  },
-  mealCalories: {
-    fontFamily: "Inter_500Medium",
-    color: Colors.light.tint,
-  },
-  mealMacros: {
-    fontFamily: "Inter_400Regular",
-    color: "#6B5E58",
-  },
-  mealTags: {
-    fontFamily: "Inter_400Regular",
-    color: "#8C8C8C",
-  },
-  swapRow: {
-    paddingTop: 8,
-  },
-  habitList: {
-    gap: 10,
-  },
-  habitItem: {
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: Colors.light.border,
-    padding: 14,
-    backgroundColor: Colors.light.background,
-    gap: 6,
-  },
-  habitItemCompleted: {
-    backgroundColor: Colors.palette.sand,
-  },
-  habitTitle: {
-    fontFamily: "Inter_600SemiBold",
-    color: Colors.light.text,
-  },
-  habitDescription: {
-    fontFamily: "Inter_400Regular",
-    color: "#5C5C5C",
-  },
-  actionLink: {
-    fontFamily: "Inter_500Medium",
-    color: Colors.light.tint,
-  },
-  completedText: {
-    textDecorationLine: "line-through",
-    color: "#8C726C",
-  },
-  pillRow: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  energyPill: {
-    flex: 1,
-    borderRadius: 12,
-    paddingVertical: 12,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: Colors.light.border,
-  },
-  energyPillSelected: {
-    backgroundColor: Colors.light.tint,
-    borderColor: Colors.light.tint,
-  },
-  energyLabel: {
-    fontFamily: "Inter_500Medium",
-    color: Colors.light.text,
-  },
-  energyLabelSelected: {
-    color: Colors.light.background,
-  },
-});
+const createStyles = (
+  theme: ThemeColors,
+  accentSurface: string,
+  completedSurface: string,
+) =>
+  StyleSheet.create({
+    fadeIn: {
+      gap: 18,
+    },
+    headerRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "flex-start",
+      marginBottom: 8,
+    },
+    greeting: {
+      fontSize: 26,
+    },
+    dateText: {
+      color: theme.mutedText,
+    },
+    cardSpacing: {
+      gap: 12,
+    },
+    adherenceValue: {
+      fontFamily: "Inter_600SemiBold",
+      fontSize: 36,
+      color: theme.tint,
+    },
+    progressBar: {
+      height: 8,
+      backgroundColor: accentSurface,
+      borderRadius: 999,
+    },
+    progressFill: {
+      height: "100%",
+      backgroundColor: theme.tint,
+      borderRadius: 999,
+    },
+    macroHighlight: {
+      fontFamily: "Inter_500Medium",
+      color: theme.text,
+    },
+    cardHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+    workoutContent: {
+      gap: 10,
+    },
+    workoutTitle: {
+      fontFamily: "Inter_600SemiBold",
+      fontSize: 16,
+      color: theme.text,
+    },
+    exerciseList: {
+      gap: 10,
+    },
+    exerciseItem: {
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: theme.border,
+      backgroundColor: accentSurface,
+      padding: 14,
+      gap: 6,
+    },
+    exerciseHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+    exerciseName: {
+      fontFamily: "Inter_600SemiBold",
+      color: theme.text,
+    },
+    exerciseMeta: {
+      color: theme.mutedText,
+    },
+    exerciseDetail: {
+      color: theme.mutedText,
+    },
+    actionLink: {
+      color: theme.tint,
+    },
+    mealItem: {
+      padding: 16,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: theme.border,
+      backgroundColor: accentSurface,
+      gap: 8,
+    },
+    mealItemCompleted: {
+      backgroundColor: completedSurface,
+    },
+    mealHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      gap: 12,
+    },
+    mealTitle: {
+      fontFamily: "Inter_600SemiBold",
+      color: theme.text,
+    },
+    mealCalories: {
+      color: theme.tint,
+      minWidth: 64,
+      textAlign: "right",
+      fontFamily: "Inter_600SemiBold",
+    },
+    mealMacros: {
+      color: theme.mutedText,
+    },
+    mealTags: {
+      color: theme.mutedText,
+    },
+    swapHint: {
+      color: theme.mutedText,
+    },
+    habitList: {
+      gap: 10,
+    },
+    habitItem: {
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: theme.border,
+      backgroundColor: accentSurface,
+      padding: 14,
+      gap: 6,
+    },
+    habitItemCompleted: {
+      backgroundColor: completedSurface,
+    },
+    habitTitle: {
+      fontFamily: "Inter_600SemiBold",
+      color: theme.text,
+    },
+    habitDescription: {
+      color: theme.mutedText,
+    },
+    completedText: {
+      textDecorationLine: "line-through",
+      color: theme.mutedText,
+    },
+    pillRow: {
+      flexDirection: "row",
+      gap: 12,
+    },
+    energyPill: {
+      flex: 1,
+      borderRadius: 12,
+      paddingVertical: 12,
+      alignItems: "center",
+      borderWidth: 1,
+      borderColor: theme.border,
+      backgroundColor: accentSurface,
+    },
+    energyPillSelected: {
+      backgroundColor: theme.tint,
+      borderColor: theme.tint,
+    },
+    energyLabel: {
+      color: theme.text,
+    },
+    energyLabelSelected: {
+      color: theme.background,
+    },
+    emptyState: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      padding: 32,
+      gap: 16,
+    },
+    emptyLogo: {
+      width: 80,
+      height: 80,
+    },
+    emptyHeading: {
+      textAlign: "center",
+    },
+    emptyCopy: {
+      textAlign: "center",
+      maxWidth: 320,
+      color: theme.mutedText,
+    },
+  });

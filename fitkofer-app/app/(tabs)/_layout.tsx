@@ -1,27 +1,38 @@
 import FontAwesome from "@expo/vector-icons/FontAwesome";
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Tabs } from "expo-router";
+import { StyleSheet, View } from "react-native";
 
 import Colors from "@/constants/Colors";
 import { useColorScheme } from "@/components/useColorScheme";
+import ThemeToggle from "@/components/ui/ThemeToggle";
 
-function TabBarIcon({
-  name,
-  color,
-}: {
-  name: React.ComponentProps<typeof FontAwesome>["name"];
-  color: string;
-}) {
-  return (
-    <FontAwesome
-      size={22}
-      style={{ marginBottom: -2 }}
-      name={name}
-      color={color}
+type TabIconProps = {
+  icon: React.ComponentProps<typeof MaterialCommunityIcons>["name"];
+  focused: boolean;
+  theme: typeof Colors.light | typeof Colors.dark;
+};
+
+const TabBarIcon = ({ icon, focused, theme }: TabIconProps) => (
+  <View
+    style={[
+      styles.tabIconBase,
+      focused
+        ? { backgroundColor: theme.tint, borderColor: theme.tint }
+        : { backgroundColor: theme.background, borderColor: theme.border },
+    ]}
+  >
+    <MaterialCommunityIcons
+      name={icon}
+      size={18}
+      color={focused ? theme.background : theme.tabIconDefault}
     />
-  );
-}
+  </View>
+);
 
-export default function TabLayout() {
+TabBarIcon.displayName = "TabBarIcon";
+
+const TabLayout = () => {
   const colorScheme = useColorScheme();
   const theme = Colors[colorScheme ?? "light"];
 
@@ -30,24 +41,29 @@ export default function TabLayout() {
       screenOptions={{
         tabBarActiveTintColor: theme.tint,
         tabBarInactiveTintColor: theme.tabIconDefault,
-        tabBarLabelStyle: { fontFamily: "Inter_500Medium" },
+        tabBarLabelStyle: { fontFamily: "Inter_500Medium", marginBottom: 4 },
         tabBarStyle: {
           backgroundColor: theme.background,
           borderTopColor: theme.border,
+          height: 70,
+          paddingTop: 8,
         },
         headerStyle: { backgroundColor: theme.background },
         headerTitleStyle: {
           fontFamily: "Inter_600SemiBold",
           color: theme.text,
         },
+        headerRight: () => <ThemeToggle />,
       }}
     >
       <Tabs.Screen
         name="dashboard"
         options={{
-          title: "Današnji plan",
-          tabBarLabel: "Početna",
-          tabBarIcon: ({ color }) => <TabBarIcon name="home" color={color} />,
+          title: "Danasnji plan",
+          tabBarLabel: "Pocetna",
+          tabBarIcon: ({ focused }) => (
+            <TabBarIcon icon="home-heart" focused={focused} theme={theme} />
+          ),
           headerShown: false,
         }}
       />
@@ -56,8 +72,8 @@ export default function TabLayout() {
         options={{
           title: "Treninzi",
           tabBarLabel: "Trening",
-          tabBarIcon: ({ color }) => (
-            <TabBarIcon name="heartbeat" color={color} />
+          tabBarIcon: ({ focused }) => (
+            <TabBarIcon icon="dumbbell" focused={focused} theme={theme} />
           ),
         }}
       />
@@ -66,8 +82,8 @@ export default function TabLayout() {
         options={{
           title: "Ishrana",
           tabBarLabel: "Obroci",
-          tabBarIcon: ({ color }) => (
-            <TabBarIcon name="cutlery" color={color} />
+          tabBarIcon: ({ focused }) => (
+            <TabBarIcon icon="food-apple" focused={focused} theme={theme} />
           ),
         }}
       />
@@ -76,19 +92,52 @@ export default function TabLayout() {
         options={{
           title: "Planer & navike",
           tabBarLabel: "Planer",
-          tabBarIcon: ({ color }) => (
-            <TabBarIcon name="check-square" color={color} />
+          tabBarIcon: ({ focused }) => (
+            <TabBarIcon icon="calendar-check" focused={focused} theme={theme} />
           ),
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
-          title: "Profil & podešavanja",
+          title: "Profil & podesavanja",
           tabBarLabel: "Profil",
-          tabBarIcon: ({ color }) => <TabBarIcon name="user" color={color} />,
+          tabBarIcon: ({ focused }) => (
+            <View
+              style={[
+                styles.tabIconBase,
+                focused
+                  ? { backgroundColor: theme.tint, borderColor: theme.tint }
+                  : {
+                      backgroundColor: theme.background,
+                      borderColor: theme.border,
+                    },
+              ]}
+            >
+              <FontAwesome
+                name="user"
+                size={18}
+                color={focused ? theme.background : theme.tabIconDefault}
+              />
+            </View>
+          ),
         }}
       />
     </Tabs>
   );
-}
+};
+
+TabLayout.displayName = "TabLayout";
+
+export default TabLayout;
+
+const styles = StyleSheet.create({
+  tabIconBase: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+  },
+});

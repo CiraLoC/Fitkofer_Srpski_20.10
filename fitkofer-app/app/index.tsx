@@ -1,9 +1,7 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
-  ActivityIndicator,
   Alert,
   Modal,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -12,9 +10,16 @@ import {
 } from "react-native";
 import { Redirect, type Href, useRouter } from "expo-router";
 
-import Colors from "@/constants/Colors";
+import Screen from "@/components/ui/Screen";
+import Logo from "@/components/ui/Logo";
+import { PrimaryButton, SecondaryButton } from "@/components/ui/Button";
+import { H1, Body } from "@/components/ui/Typography";
 import { supabase } from "@/lib/supabase/client";
 import { useAppState } from "@/state/AppStateContext";
+import Colors from "@/constants/Colors";
+import { useColorScheme } from "@/components/useColorScheme";
+
+type ThemeColors = typeof Colors.light;
 
 export default function IndexRoute() {
   const {
@@ -30,26 +35,11 @@ export default function IndexRoute() {
     membershipStatus,
   );
 
-  if (!isHydrated) {
-    return null;
-  }
-
-  if (!session) {
-    return <LandingScreen />;
-  }
-
-  if (!hasCompletedOnboarding) {
-    return <Redirect href="/onboarding" />;
-  }
-
-  if (!hasActiveMembership) {
-    return <Redirect href={membershipHref} />;
-  }
-
-  if (!plan) {
-    return <Redirect href="/plan-options" />;
-  }
-
+  if (!isHydrated) return null;
+  if (!session) return <LandingScreen />;
+  if (!hasCompletedOnboarding) return <Redirect href="/onboarding" />;
+  if (!hasActiveMembership) return <Redirect href={membershipHref} />;
+  if (!plan) return <Redirect href="/plan-options" />;
   return <Redirect href={dashboardHref} />;
 }
 
@@ -59,6 +49,9 @@ function LandingScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const scheme = useColorScheme();
+  const theme = Colors[scheme];
+  const styles = useMemo(() => createStyles(theme), [theme]);
 
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
@@ -71,9 +64,7 @@ function LandingScreen() {
         email: email.trim(),
         password,
       });
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
       setLoginVisible(false);
       setEmail("");
       setPassword("");
@@ -87,10 +78,7 @@ function LandingScreen() {
     }
   };
 
-  const handleCreateAccount = () => {
-    router.push("/auth?mode=signUp" as Href);
-  };
-
+  const handleCreateAccount = () => router.push("/auth?mode=signUp" as Href);
   const handleOpenLogin = () => {
     setEmail("");
     setPassword("");
@@ -98,30 +86,20 @@ function LandingScreen() {
   };
 
   return (
-    <View style={styles.landingContainer}>
-      <ScrollView contentContainerStyle={styles.landingContent}>
-        <Text style={styles.appName}>FitkoferApp</Text>
-        <Text style={styles.tagline}>
-          Unapredite vaše zdravlje uz održive rutine i personalizovane programe
-          treninga i ishrane.
-        </Text>
+    <Screen scroll>
+      <View style={styles.hero}>
+        <Logo style={{ width: 96, height: 96, marginBottom: 8 }} />
+        <H1 style={styles.appName}>Fitkofer</H1>
+        <Body style={styles.tagline}>
+          Personalni treninzi i ishrana za zauzete mame — bez pritiska, bez
+          dijeta, bez stresa.
+        </Body>
+      </View>
 
-        <View style={styles.buttonStack}>
-          <TouchableOpacity
-            style={styles.primaryButton}
-            onPress={handleCreateAccount}
-          >
-            <Text style={styles.primaryLabel}>Kreiraj nalog</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.secondaryButton}
-            onPress={handleOpenLogin}
-          >
-            <Text style={styles.secondaryLabel}>Log in</Text>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
+      <View style={styles.buttonStack}>
+        <PrimaryButton title="Kreiraj nalog" onPress={handleCreateAccount} />
+        <SecondaryButton title="Uloguj se" onPress={handleOpenLogin} />
+      </View>
 
       <Modal
         visible={loginVisible}
@@ -131,9 +109,9 @@ function LandingScreen() {
       >
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Prijavi se</Text>
+            <Text style={styles.modalTitle}>Prijava</Text>
             <Text style={styles.modalCopy}>
-              Unesi email adresu i lozinku kako bi nastavio la sa planom.
+              Unesi email adresu i lozinku kako bi nastavila sa planom.
             </Text>
             <TextInput
               style={styles.modalInput}
@@ -151,17 +129,12 @@ function LandingScreen() {
               onChangeText={setPassword}
             />
 
-            <TouchableOpacity
-              style={[styles.primaryButton, loading && styles.disabledButton]}
+            <PrimaryButton
+              title="Prijavi se"
               onPress={handleLogin}
-              disabled={loading}
-            >
-              {loading ? (
-                <ActivityIndicator color={Colors.light.background} />
-              ) : (
-                <Text style={styles.primaryLabel}>Prijavi se</Text>
-              )}
-            </TouchableOpacity>
+              loading={loading}
+              style={{ marginTop: 4 }}
+            />
 
             <TouchableOpacity
               style={styles.modalSecondaryButton}
@@ -172,113 +145,80 @@ function LandingScreen() {
           </View>
         </View>
       </Modal>
-    </View>
+    </Screen>
   );
 }
 
-const styles = StyleSheet.create({
-  landingContainer: {
-    flex: 1,
-    backgroundColor: Colors.light.background,
-  },
-  landingContent: {
-    flexGrow: 1,
-    padding: 32,
-    justifyContent: "center",
-    alignItems: "center",
-    gap: 24,
-  },
-  appName: {
-    fontFamily: "PlayfairDisplay_700Bold",
-    fontSize: 42,
-    color: Colors.light.text,
-    textAlign: "center",
-  },
-  tagline: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 18,
-    color: "#5C5C5C",
-    textAlign: "center",
-    lineHeight: 26,
-    maxWidth: 320,
-  },
-  buttonStack: {
-    width: "100%",
-    maxWidth: 320,
-    gap: 12,
-  },
-  primaryButton: {
-    backgroundColor: Colors.light.tint,
-    paddingVertical: 16,
-    borderRadius: 16,
-    alignItems: "center",
-  },
-  primaryLabel: {
-    fontFamily: "Inter_600SemiBold",
-    color: Colors.light.background,
-    fontSize: 16,
-  },
-  secondaryButton: {
-    borderWidth: 1,
-    borderColor: Colors.light.tint,
-    paddingVertical: 16,
-    borderRadius: 16,
-    alignItems: "center",
-    backgroundColor: Colors.light.background,
-  },
-  secondaryLabel: {
-    fontFamily: "Inter_600SemiBold",
-    color: Colors.light.tint,
-    fontSize: 16,
-  },
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.4)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 24,
-  },
-  modalCard: {
-    width: "100%",
-    maxWidth: 360,
-    backgroundColor: Colors.light.card,
-    borderRadius: 20,
-    padding: 24,
-    gap: 12,
-    borderWidth: 1,
-    borderColor: Colors.light.border,
-  },
-  modalTitle: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 20,
-    color: Colors.light.text,
-  },
-  modalCopy: {
-    fontFamily: "Inter_400Regular",
-    color: "#6B5E58",
-  },
-  modalInput: {
-    backgroundColor: Colors.light.background,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: Colors.light.border,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontFamily: "Inter_500Medium",
-    color: Colors.light.text,
-  },
-  modalSecondaryButton: {
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: Colors.light.border,
-  },
-  modalSecondaryLabel: {
-    fontFamily: "Inter_500Medium",
-    color: Colors.light.text,
-  },
-  disabledButton: {
-    opacity: 0.6,
-  },
-});
+const createStyles = (theme: ThemeColors) =>
+  StyleSheet.create({
+    hero: {
+      alignItems: "center",
+      gap: 12,
+      marginTop: 20,
+      marginBottom: 18,
+    },
+    appName: {
+      fontSize: 40,
+      textAlign: "center",
+    },
+    tagline: {
+      textAlign: "center",
+      maxWidth: 340,
+    },
+    buttonStack: {
+      width: "100%",
+      maxWidth: 360,
+      gap: 12,
+      alignSelf: "center",
+    },
+    modalBackdrop: {
+      flex: 1,
+      backgroundColor: "rgba(0,0,0,0.4)",
+      justifyContent: "center",
+      alignItems: "center",
+      padding: 24,
+    },
+    modalCard: {
+      width: "100%",
+      maxWidth: 360,
+      backgroundColor: theme.card,
+      borderRadius: 20,
+      padding: 24,
+      gap: 12,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    modalTitle: {
+      fontFamily: "Inter_600SemiBold",
+      fontSize: 20,
+      color: theme.text,
+    },
+    modalCopy: {
+      fontFamily: "Inter_400Regular",
+      color: theme.mutedText,
+    },
+    modalInput: {
+      backgroundColor: theme.background,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: theme.border,
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+      fontFamily: "Inter_500Medium",
+      color: theme.text,
+    },
+    modalSecondaryButton: {
+      paddingVertical: 14,
+      borderRadius: 12,
+      alignItems: "center",
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    modalSecondaryLabel: {
+      fontFamily: "Inter_500Medium",
+      color: theme.text,
+    },
+    disabledButton: {
+      opacity: 0.6,
+    },
+  });

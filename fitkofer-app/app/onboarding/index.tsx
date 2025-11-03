@@ -12,6 +12,7 @@ import {
 import { useRouter, type Href } from "expo-router";
 
 import Colors from "@/constants/Colors";
+import { H2 } from "@/components/ui/Typography";
 import { generatePlan } from "@/lib/plan/generator";
 import { useAppState } from "@/state/AppStateContext";
 import type {
@@ -117,7 +118,7 @@ function StepTitle({ step, index }: { step: Step; index: number }) {
   return (
     <View style={styles.stepHeader}>
       <Text style={styles.stepIndex}>{index + 1}</Text>
-      <Text style={styles.stepTitle}>{step}</Text>
+      <H2 style={styles.stepTitle as any}>{step}</H2>
     </View>
   );
 }

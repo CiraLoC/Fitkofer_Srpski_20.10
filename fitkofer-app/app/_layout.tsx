@@ -2,7 +2,7 @@ import FontAwesome from "@expo/vector-icons/FontAwesome";
 import {
   DarkTheme,
   DefaultTheme,
-  ThemeProvider,
+  ThemeProvider as NavigationThemeProvider,
 } from "@react-navigation/native";
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
@@ -23,7 +23,9 @@ import {
 import { initSentry } from "@/lib/logging/sentry";
 import { initAnalytics } from "@/lib/logging/analytics";
 import { AppStateProvider } from "@/state/AppStateContext";
+import { ThemeProvider } from "@/state/ThemeContext";
 import { useColorScheme } from "@/components/useColorScheme";
+import Colors from "@/constants/Colors";
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -70,74 +72,93 @@ export default function RootLayout() {
 }
 
 function RootLayoutNav() {
+  return (
+    <ThemeProvider>
+      <AppStateProvider>
+        <ThemedNavigation />
+      </AppStateProvider>
+    </ThemeProvider>
+  );
+}
+
+function ThemedNavigation() {
   const colorScheme = useColorScheme();
+  const surface = Colors[colorScheme];
+  const navigationTheme =
+    colorScheme === "dark" ? { ...DarkTheme } : { ...DefaultTheme };
+  navigationTheme.colors = {
+    ...navigationTheme.colors,
+    background: surface.background,
+    card: surface.card,
+    text: surface.text,
+    border: surface.border,
+    primary: surface.tint,
+  };
 
   return (
-    <AppStateProvider>
-      <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
-        <Stack>
-          <Stack.Screen name="index" options={{ headerShown: false }} />
-          <Stack.Screen name="auth" options={{ headerShown: false }} />
-          <Stack.Screen
-            name="(tabs)"
-            options={{
-              headerShown: false,
-            }}
-          />
-          <Stack.Screen
-            name="onboarding/index"
-            options={{
-              headerShown: false,
-            }}
-          />
-          <Stack.Screen
-            name="plan-preview"
-            options={{
-              title: "Plan pregled",
-              headerTitleStyle: {
-                fontFamily: "Inter_600SemiBold",
-                fontSize: 18,
-              },
-            }}
-          />
-          <Stack.Screen
-            name="plan-options"
-            options={{
-              title: "Izaberi plan",
-              headerTitleStyle: {
-                fontFamily: "Inter_600SemiBold",
-                fontSize: 18,
-              },
-            }}
-          />
-          <Stack.Screen
-            name="plan-selection"
-            options={{
-              headerShown: false,
-            }}
-          />
-          <Stack.Screen
-            name="membership-required"
-            options={{
-              title: "Članstvo",
-              headerTitleStyle: {
-                fontFamily: "Inter_600SemiBold",
-                fontSize: 18,
-              },
-            }}
-          />
-          <Stack.Screen
-            name="profile-edit"
-            options={{
-              title: "Uredi profil",
-              headerTitleStyle: {
-                fontFamily: "Inter_600SemiBold",
-                fontSize: 18,
-              },
-            }}
-          />
-        </Stack>
-      </ThemeProvider>
-    </AppStateProvider>
+    <NavigationThemeProvider value={navigationTheme}>
+      <Stack>
+        <Stack.Screen name="index" options={{ headerShown: false }} />
+        <Stack.Screen name="auth" options={{ headerShown: false }} />
+        <Stack.Screen
+          name="(tabs)"
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="onboarding/index"
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="plan-preview"
+          options={{
+            title: "Plan pregled",
+            headerTitleStyle: {
+              fontFamily: "Inter_600SemiBold",
+              fontSize: 18,
+            },
+          }}
+        />
+        <Stack.Screen
+          name="plan-options"
+          options={{
+            title: "Izaberi plan",
+            headerTitleStyle: {
+              fontFamily: "Inter_600SemiBold",
+              fontSize: 18,
+            },
+          }}
+        />
+        <Stack.Screen
+          name="plan-selection"
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="membership-required"
+          options={{
+            title: "Članstvo",
+            headerTitleStyle: {
+              fontFamily: "Inter_600SemiBold",
+              fontSize: 18,
+            },
+          }}
+        />
+        <Stack.Screen
+          name="profile-edit"
+          options={{
+            title: "Uredi profil",
+            headerTitleStyle: {
+              fontFamily: "Inter_600SemiBold",
+              fontSize: 18,
+            },
+          }}
+        />
+      </Stack>
+    </NavigationThemeProvider>
   );
 }

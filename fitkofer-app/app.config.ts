@@ -7,22 +7,22 @@ const defineConfig = ({ config }: ConfigContext): ExpoConfig => ({
   slug: "fitkofer-app",
   version: "1.0.0",
   orientation: "portrait",
-  icon: "./assets/images/icon.png",
+  icon: "./assets/images/logo-full-color.png",
   scheme: "fitkoferapp",
   userInterfaceStyle: "automatic",
   newArchEnabled: true,
   splash: {
     image: "./assets/images/splash-icon.png",
     resizeMode: "contain",
-    backgroundColor: "#ffffff",
+    backgroundColor: "#B2554E",
   },
   ios: {
     supportsTablet: true,
   },
   android: {
     adaptiveIcon: {
-      foregroundImage: "./assets/images/adaptive-icon.png",
-      backgroundColor: "#ffffff",
+      foregroundImage: "./assets/images/logo-full-color.png",
+      backgroundColor: "#B2554E",
     },
     edgeToEdgeEnabled: true,
     predictiveBackGestureEnabled: false,
