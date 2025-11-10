@@ -20,7 +20,6 @@ import {
   Inter_600SemiBold,
 } from "@expo-google-fonts/inter";
 
-import { initSentry } from "@/lib/logging/sentry";
 import { initAnalytics } from "@/lib/logging/analytics";
 import { AppStateProvider } from "@/state/AppStateContext";
 import { ThemeProvider } from "@/state/ThemeContext";
@@ -37,7 +36,6 @@ export const unstable_settings = {
   initialRouteName: "(tabs)",
 };
 
-initSentry();
 initAnalytics();
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
